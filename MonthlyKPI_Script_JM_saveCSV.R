@@ -58,17 +58,17 @@ sf_auth()
 # sf_auth(login_url="https://login.salesforce.com")
 
 ###bring in Contact Records
-my_soql_contact <- sprintf("SELECT Id,	Emplid__c, Email, hed__Primary_Organization__c,
-                            MDM_Primary_Type__c,  NetId__c,Primary_Department__r.Name, 
-                            User__c FROM Contact")
+my_soql_contact <- sprintf("SELECT Id,	Emplid__c, Email, User__c, Primary_Department__r.Name, 
+                           NetId__c, hed__Primary_Organization__c, MDM_Primary_Type__c
+                           FROM Contact")
 
 contact_records <- sf_query(my_soql_contact, object_name="Contact", api_type="Bulk 1.0")
 
 ###bring in User object fields
-soql_users<-sprintf("select ContactId, CreatedDate, Department, Email, Id, 
-                    LastLoginDate, Name, NetID__c,   
-                    ProfileId, Profile.Name, Title, UserRoleId, 
-                    UserRole.Name, Username, UserType
+soql_users<-sprintf("select Id, Email, UserType, Name, NetID__c, Profile.Name, 
+                    ContactId, CreatedDate,
+                    Department, ProfileId, UserRoleId, 
+                    UserRole.Name, Title, Username, LastLoginDate 
                     from User
                     WHERE IsActive=TRUE ")
 users_SF <- sf_query(soql_users, object_name="User", api_type="Bulk 1.0")
@@ -130,6 +130,9 @@ Social_Logins$Profile.Name<-"Social"
 users %>% group_by(Profile.Name) %>% tally
 ##restrict User file to those we want
 users<-subset(users, users$Profile.Name %in% c("Salesforce Base", "Advising Base", "Service Desk Base"))
+users$NetID__c[users$NetID__c=="Mlfink3"]<-"mlfink3"
+# save to csv
+write.csv(users, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/users", last_month, this_year, ".csv"), row.names = FALSE)
 
 ##reshape the permissionsets file
 
@@ -144,6 +147,10 @@ names(perms2prods)
 users_perms<-merge(users, permissionsets, by.x = "Id", by.y = "AssigneeId")
 users_perms_prods<-merge(users_perms, perms2prods, by.x = "PermissionSet.Name", 
                          by.y = "PermissionSet.Name", all.x = TRUE)
+#save to csv
+write.csv(users_perms, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/users_perms", last_month, this_year, ".csv"), row.names = FALSE)
+write.csv(users_perms_prods, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/users_perms_prods", last_month, this_year, ".csv"), row.names = FALSE)
+
 names(users_perms_prods)
 # users_perms_prods<-users_perms_prods[, -c(10,14,15,16)] # no real need to delete columns
 
@@ -153,7 +160,9 @@ names(users_perms_prods)
 #
 names(MC_Logins) 
 contact_records<-subset(contact_records, !is.na(contact_records$NetID__c))
-users$NetID__c[users$NetID__c=="Mlfink3"]<-"mlfink3"
+
+#save to csv
+write.csv(contact_records, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/contact_records", last_month, this_year, ".csv"), row.names = FALSE)
 
 ##need to check to make sure the email addresses are @email.arizona.edu, not @arizona.edu before merge - ok
 # MC_Logins_Feb_2021$pre<-sapply(strsplit(MC_Logins_Feb_2021$`Email Address`, "@"), "[", 1)
@@ -202,6 +211,9 @@ colnames(MC_contacts_social)[10]<-"MCProfile"
 colnames(MC_contacts_social)[11]<-"Social_LastLoginDate"
 colnames(MC_contacts_social)[12]<-"SocialProfile"
 
+# write csv
+write.csv(MC_contacts_social, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/MC_contacts_social", last_month, this_year, ".csv"), row.names = FALSE)
+
 names(users_perms_prods)
 # upp_clean <- users_perms_prods[, c(1,2,4,7,8,11:13)] # product not kept in this code
 # upp_clean <- users_perms_prods[, c(1,2,4,7,8,11:14, 35)] # had to add these
@@ -226,6 +238,10 @@ MC_s_c_u_foruse<-subset(MC_s_c_u, (!is.na(MC_s_c_u$SF_LastLoginDate) | !is.na(MC
 names(MC_s_c_u_foruse)
 length(unique(MC_s_c_u_foruse$Id[MC_s_c_u_foruse$MCProfile=="MC"]))
 test<-subset(MC_s_c_u_foruse, MC_s_c_u_foruse$SocialProfile=="Social")
+
+# write to csv
+write.csv(MC_s_c_u_foruse, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/MC_s_c_u_foruse", last_month, this_year, ".csv"), row.names = FALSE)
+
 #
 #Merge in Affiliations
 #
@@ -233,6 +249,9 @@ names(affiliations)
 affiliation1s <- subset(affiliations, affiliations$hed__Primary__c==TRUE)
 affiliation1s <- affiliation1s[, -c(4)]
 affiliation1s<-distinct(affiliation1s)
+
+# write to csv
+write.csv(affiliation1s, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/affiliation1s", last_month, this_year, ".csv"), row.names = FALSE)
 
 df_foruse<-merge(MC_s_c_u_foruse, affiliation1s, by.x = "Id", by.y = "hed__Contact__c", all.x = TRUE)
 ##take out all Trellis team members from counts
@@ -242,11 +261,17 @@ df_foruse<-subset(df_foruse, !(df_foruse$NetID__c %in% c("sananava", "fkmiller",
 df_foruse %>%group_by(df_foruse$MCProfile)%>% tally
 length(unique(df_foruse$Email[df_foruse$MCProfile=="MC"])) # removed the .x from email
 
+# write to csv
+write.csv(df_foruse, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/df_foruse", last_month, this_year, ".csv"), row.names = FALSE)
+
 #restrict columns to those we need
 names(df_foruse)
 # df_fortable <- df_foruse[, -c(1,2,4,6,8,10,11,12,13)] # removed the 15 - createddate and 16 to keep product
 df_fortable <- df_foruse[, -c(1,7)] # what jung mee wants to do. 
 df_fortable<-unique(df_fortable)
+
+# write to csv
+write.csv(df_fortable, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/df_fortable", last_month, this_year, ".csv"), row.names = FALSE)
 
 #########################################################
 #########################################################
@@ -383,7 +408,7 @@ logins_firstlogin <- logins %>%
   ) %>%
   arrange(Email, CreatedDate, Profile.Name, UserRole.Name) #Min_login is not showing or one with NA
 
-
+save.image("MonthlyKPI_JM_Dec15.RData")
 ###stopped here 19 April 2021
 # jung mee updates the code 10 December 2021
 logins_firstlogin$T2firstlogin<-difftime(as.Date(logins_firstlogin$MinLoginDate), 
