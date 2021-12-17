@@ -721,24 +721,3 @@ write.csv(users_by_unit, paste0("U:/WorkSpaces/fkm_data/Program Team KPIs/users_
 write.csv(prds_by_unit, paste0("U:/WorkSpaces/fkm_data/Program Team KPIs/prds_by_unit", 5, this_year, ".csv"), row.names = FALSE)
 write.csv(prds_by_unit_reshaped, paste0("U:/WorkSpaces/fkm_data/Program Team KPIs/prds_by_unit_reshaped", 5, this_year, ".csv"), row.names = FALSE)
 
-
-
-# ##for one file per table - this won't work from the RStudio server interface - will work from desktop
-# # df.list<-list(epr_email_opens_byweek,epr_ack,epr_FT1, epr_FT2)
-# # name.vec<-c('epr_email_opens_byweek','epr_ack','epr_FT1', 'epr_FT2')
-# # 
-# library(writexl)
-# # 
-# # sapply(1:length(df.list),
-# #        function(i) write_xlsx(df.list[[i]], paste0(strEPR, name.vec[i],  '.xlsx'), col_names = TRUE, format_headers = TRUE))
-# 
-# ##for on sheet per table
-# sheets <- list("epr_email_opens_byweek" = epr_email_opens_byweek, "epr_ack" = epr_ack, "email_ssri" = email_ssri,  "email_instructor" = email_instructor) #assume sheet1 and sheet2 are data frames
-# write_xlsx(sheets, "C:/Users/fkmiller/Box/Trellis/Active Products/Trellis Early Progress Reports/Reporting/EPR Use Tables/UserBehavior.xlsx")
-# 
-# sheets <- list("epr_FT1" = epr_FT1, "epr_FT2" = epr_FT2, "epr_SFT1" = epr_SFT1, "epr_SFT2" = epr_SFT2) #assume sheet1 and sheet2 are data frames
-# write_xlsx(sheets, "U:/WorkSpaces/fkm_data/FeedbackTypes.xlsx")
-# 
-# 
-# users2 <- list("users2" = users) #assume sheet1 and sheet2 are data frames
-# write_xlsx(users2, "C:/Users/fkmiller/Box/~FKM/Reporting/Affiliations plus users/20200316_users.xlsx")
