@@ -20,7 +20,7 @@ library(reshape2)
 ### check working directory
 getwd() #figure out the working directory
 #setwd("~/Trellis Users KPIs") 
-setwd("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/")
+# setwd("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/")
 
 rm(list=ls(all=TRUE)) 
 options(digits=3)
@@ -52,44 +52,44 @@ glimpse(Social_Logins)
 ############################################
 ##STEP 2: Import data from SF ------ Paused for now while Brett fixes something
 
-#Oauth
-sf_auth()
+# #Oauth
+# sf_auth()
+# # 
+# # sf_auth(login_url="https://login.salesforce.com")
 # 
-# sf_auth(login_url="https://login.salesforce.com")
-
-###bring in Contact Records
-my_soql_contact <- sprintf("SELECT Id,	Emplid__c, Email, User__c, Primary_Department__r.Name, 
-                           NetId__c, hed__Primary_Organization__c, MDM_Primary_Type__c
-                           FROM Contact")
-
-contact_records <- sf_query(my_soql_contact, object_name="Contact", api_type="Bulk 1.0")
-
-###bring in User object fields
-soql_users<-sprintf("select Id, Email, UserType, Name, NetID__c, Profile.Name, 
-                    ContactId, CreatedDate,
-                    Department, ProfileId, UserRoleId, 
-                    UserRole.Name, Title, Username, LastLoginDate 
-                    from User
-                    WHERE IsActive=TRUE ")
-users_SF <- sf_query(soql_users, object_name="User", api_type="Bulk 1.0")
-
-#####Bring In User Login History
-solq_logins<-sprintf("Select UserId, Browser, LoginTime, LoginType, Platform, Status from LoginHistory
-                     WHERE LoginTime > 2019-10-01T00:00:00.000Z")
-user_logins <- sf_query(solq_logins, object_name="LoginHistory", api_type="Bulk 1.0")
-
-###bring in affiliation Records
-my_soql_aff <- sprintf("SELECT Academic_Department__c, hed__Affiliation_Type__c, hed__Contact__c, 
-                        hed__Primary__c, hed__Account__r.Name, Parent_Organization__c
-                           FROM hed__Affiliation__c")
-
-affiliations <- sf_query(my_soql_aff, object_name="hed__Affiliation__c", api_type="Bulk 1.0")
-
-
-###bring in permissionsets Records
-solq_perms<-sprintf("select AssigneeId, PermissionSet.Name, PermissionSet.Type, PermissionSet.ProfileId, 
-                    PermissionSetGroupId from PermissionSetAssignment")
-permissionsets <- sf_query(solq_perms, object_name="PermissionSetAssignment", api_type="Bulk 1.0")
+# ###bring in Contact Records
+# my_soql_contact <- sprintf("SELECT Id,	Emplid__c, Email, User__c, Primary_Department__r.Name, 
+#                            NetId__c, hed__Primary_Organization__c, MDM_Primary_Type__c
+#                            FROM Contact")
+# 
+# contact_records <- sf_query(my_soql_contact, object_name="Contact", api_type="Bulk 1.0")
+# 
+# ###bring in User object fields
+# soql_users<-sprintf("select Id, Email, UserType, Name, NetID__c, Profile.Name, 
+#                     ContactId, CreatedDate,
+#                     Department, ProfileId, UserRoleId, 
+#                     UserRole.Name, Title, Username, LastLoginDate 
+#                     from User
+#                     WHERE IsActive=TRUE ")
+# users_SF <- sf_query(soql_users, object_name="User", api_type="Bulk 1.0")
+# 
+# #####Bring In User Login History
+# solq_logins<-sprintf("Select UserId, Browser, LoginTime, LoginType, Platform, Status from LoginHistory
+#                      WHERE LoginTime > 2019-10-01T00:00:00.000Z")
+# user_logins <- sf_query(solq_logins, object_name="LoginHistory", api_type="Bulk 1.0")
+# 
+# ###bring in affiliation Records
+# my_soql_aff <- sprintf("SELECT Academic_Department__c, hed__Affiliation_Type__c, hed__Contact__c, 
+#                         hed__Primary__c, hed__Account__r.Name, Parent_Organization__c
+#                            FROM hed__Affiliation__c")
+# 
+# affiliations <- sf_query(my_soql_aff, object_name="hed__Affiliation__c", api_type="Bulk 1.0")
+# 
+# 
+# ###bring in permissionsets Records
+# solq_perms<-sprintf("select AssigneeId, PermissionSet.Name, PermissionSet.Type, PermissionSet.ProfileId, 
+#                     PermissionSetGroupId from PermissionSetAssignment")
+# permissionsets <- sf_query(solq_perms, object_name="PermissionSetAssignment", api_type="Bulk 1.0")
 
 library(readxl)
 perms2prods <- read.csv("user_perms_prods.csv")
@@ -270,9 +270,26 @@ names(df_foruse)
 df_fortable <- df_foruse[, -c(1,7)] # what jung mee wants to do. 
 df_fortable<-unique(df_fortable)
 
-# write to csv
+
 write.csv(df_fortable, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/df_fortable", last_month, this_year, ".csv"), row.names = FALSE)
 
+# read in the data for local use
+setwd("~/Documents/Trellis/CRM-16425/Datasets")
+df_fortable <- read.csv('./preprocessed/df_fortable112021.csv')
+
+# change date time into month year only 
+# library(tidyverse)
+# 
+# format 4/30/2021 12:05 for Last.Login
+df_fortable$Last.Login.month <- mdy_hm(df_fortable$Last.Login)
+
+df_month <-
+  df_fortable %>%
+  mutate(LastLoginMonth = floor_date(as_date(Last.Login.month), "month"))
+
+# from MC_LastLoginDate
+
+# write to csv
 #########################################################
 #########################################################
 #######################################################
@@ -333,8 +350,14 @@ prds_by_unit_reshaped <- user_cts_by_prd_unit %>%
   summarise(nProduct = n_distinct(by))
 
 ### rename vars and write tables to files and folder
-prds_by_unit_reshaped<-rename(prds_by_unit_reshaped, c("Unit/Division" = "by", "MC" = "counter.MC", "Social" = "counter.Social",
-                                                       "Scheduling/Notes" = "counter.Scheduling/Notes", "Service Desk" = "counter.Service Desk", "Marketing - SF" = "counter.Marketing - SF", "Events" = "counter.Events"))
+# prds_by_unit_reshaped<-rename(prds_by_unit_reshaped, c("Unit/Division" = "by", "MC" = "counter.MC", "Social" = "counter.Social",
+
+prds_by_unit_reshaped <- prds_by_unit_reshaped %>%
+  mutate(Var1 = recode(Var1, "Unit/Division" = "by", "MC" = "counter.MC", "Social" = "counter.Social",
+                       "Scheduling/Notes" = "counter.Scheduling/Notes", 
+                       "Service Desk" = "counter.Service Desk", "Marketing - SF" = "counter.Marketing - SF", 
+                       "Events" = "counter.Events"))
+
 # user_counts_by_product<-rename(user_counts_by_product,  c("Product/Profile" = "Var1"))
 # user_cts_by_prd_unit <- rename(user_cts_by_prd_unit, c("Unit/Division" = "by", "Product/Profile" = "Var1"))
 # users_by_unit<-rename(users_by_unit, c("Unit/Division" = "by", "Total Users"="sum(Freq)"))
@@ -342,11 +365,11 @@ prds_by_unit_reshaped<-rename(prds_by_unit_reshaped, c("Unit/Division" = "by", "
 
 # setwd<-"U:/WorkSpaces/fkm_data/Program Team KPIs/"
 
-write.csv(user_counts_by_product, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/user_counts_by_product", last_month, this_year, ".csv"), row.names = FALSE)
-write.csv(user_cts_by_prd_unit, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/user_cts_by_prd_unit", last_month, this_year, ".csv"), row.names = FALSE)
-write.csv(users_by_unit, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/users_by_unit", last_month, this_year, ".csv"), row.names = FALSE)
-write.csv(prds_by_unit, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/prds_by_unit", last_month, this_year, ".csv"), row.names = FALSE)
-write.csv(prds_by_unit_reshaped, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/prds_by_unit_reshaped", last_month, this_year, ".csv"), row.names = FALSE)
+write.csv(user_counts_by_product, paste0("user_counts_by_product", last_month, this_year, ".csv"), row.names = FALSE)
+write.csv(user_cts_by_prd_unit, paste0("user_cts_by_prd_unit", last_month, this_year, ".csv"), row.names = FALSE)
+write.csv(users_by_unit, paste0("users_by_unit", last_month, this_year, ".csv"), row.names = FALSE)
+write.csv(prds_by_unit, paste0("prds_by_unit", last_month, this_year, ".csv"), row.names = FALSE)
+write.csv(prds_by_unit_reshaped, paste0("prds_by_unit_reshaped", last_month, this_year, ".csv"), row.names = FALSE)
 
 
 ###################################################################################
