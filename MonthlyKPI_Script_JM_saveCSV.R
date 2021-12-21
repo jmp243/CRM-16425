@@ -285,11 +285,50 @@ df_fortable$Last.Login.month <- mdy_hm(df_fortable$Last.Login)
 
 df_month <-
   df_fortable %>%
-  mutate(LastLoginMonth = floor_date(as_date(Last.Login.month), "month"))
+  mutate(LastLoginMonth = floor_date(as_date(Last.Login.month)))
 
 # from MC_LastLoginDate
+df_month$MC_lastmonth <- mdy(df_month$MC_LastLoginDate)
+
+df_month <-
+  df_month %>% 
+  mutate(MC_last.month.login = floor_date(as_date(MC_lastmonth)))
+
+# from SF_LastLoginDate 2020-04-17 23:20:58
+df_month$SF_lastmonth <- ymd_hms(df_month$SF_LastLoginDate)
+
+df_month <-
+  df_month %>% 
+  mutate(SF_last.month.login = floor_date(as_date(SF_lastmonth)))
+
+# Social_LastLoginDate 11/01/2021
+df_month$Social_lastmonth <- mdy(df_month$Social_LastLoginDate)
+
+df_month <-
+  df_month %>% 
+  mutate(Social_last.month.login = floor_date(as_date(Social_lastmonth)))
+
+# from LastLogin.x 2020-04-17 23:20:58
+df_month$lastmonth.x <- ymd_hms(df_month$LastLoginDate.x)
+
+df_month <-
+  df_month %>% 
+  mutate(last.month.login.x = floor_date(as_date(lastmonth.x)))
+
+# from LastLogin.y 11/29/2021 15:07
+df_month$lastmonth.y <- mdy_hm(df_month$LastLoginDate.y)
+
+df_month <-
+  df_month %>% 
+  mutate(last.month.login.y = floor_date(as_date(lastmonth.y)))
+
+# drop the unused variables 
+drop <- c("Last.Login.month","MC_lastmonth", "SF_lastmonth", "Social_lastmonth","lastmonth.x", "lastmonth.y")
+df_month2 = df_month[,!(names(df_month) %in% drop)]
 
 # write to csv
+write.csv(df_month2, paste0(last_month, this_year, ".csv"), row.names = FALSE)
+
 #########################################################
 #########################################################
 #######################################################
