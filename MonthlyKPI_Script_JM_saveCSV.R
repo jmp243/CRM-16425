@@ -330,6 +330,28 @@ df_month2 = df_month[,!(names(df_month) %in% drop)]
 write.csv(df_month2, paste0(last_month, this_year, ".csv"), row.names = FALSE)
 
 #########################################################
+# Linking R to API
+# install.packages(c("httr", "jsonlite"))
+library(httr)
+library(jsonlite)
+library(Rserve)
+# # unlink old Makevars
+# unlink("~/.R/Makevars")
+# unlink("~/.Renviron")
+# 
+# file.edit("~/.Renviron")
+# 
+# find_rtools()
+# # install.packages("Rserve",dependencies=TRUE)
+# install.packages("Rserve",,"http://rforge.net")
+# library(Rserve) # is not available for my version of R
+# av <- available.packages(filters=list())
+# pkg_url <- "https://cran.r-project.org/bin/macosx/contrib/4.1/Rserve_1.8-10.tgz"
+# install.packages(pkg_url, repos = NULL)
+# # Sys.setenv(RGL_USE_NULL=TRUE)
+Rserve(args="--vanilla")
+
+# Rserve()
 #########################################################
 #######################################################
 ##table construction
@@ -359,7 +381,6 @@ SocUC_unit<-subset(SocUC_unit, SocUC_unit$Freq!=0)
 user_cts_by_prd_unit<-rbind(SFUC_unit, MCUC_unit, SocUC_unit)
 
 ##total users by unit
-
 users_by_unit<- user_cts_by_prd_unit %>%
   group_by(by) %>% 
   summarise(sum(Freq))
@@ -424,8 +445,8 @@ names(df_fortable)
 units_by_month<-df_fortable
 names(units_by_month)
 
-# change dates from characters to Date-Time
-units_by_month$SFCreatedDate <- lubridate::mdy_hms(units_by_month$Created.Date) 
+# change dates from characters to Date-Time in 4/17/2020 16:20 format
+units_by_month$SFCreatedDate <- lubridate::mdy_hm(units_by_month$Created.Date) 
 
 units_max_min <- units_by_month %>%
   group_by(Parent_Organization__c) %>%
@@ -446,33 +467,44 @@ units_max_min<-subset(units_max_min, !is.na(units_max_min$firstmonth))
 unit_FirstTrellisMonth<-units_max_min[,-c(2,3)]
 
 write.csv(unit_FirstTrellisMonth, "D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/Usage and Adoption/unit_FirstTrellisMonth_062021.csv")
-
+### works up through here
 
 ###################################################################################
 ###################################################################################
 ##                      average time between user creation and first login for users created in last 6 months
 # user_logins <- sf_query(solq_logins, object_name="LoginHistory", api_type="Bulk 1.0")
+users <- read.csv('./preprocessed/users.csv')
+user_logins <- read.csv('./preprocessed/user_logins.csv')
 
-# user_logins <- user_logins %>% 
-#   mutate(LoginTime = lubridate::ymd_hms(LoginTime))
+# users have LoginTime in this format - 2021-07-27 18:19:30
+user_logins <- user_logins %>%
+  mutate(LoginTime = lubridate::ymd_hms(LoginTime))
+# users have LastLoginDate in 2021-12-20 17:39:37 format and Last.Login in 4/30/2021 11:16, 
+# CreatedDate was 2020-06-18 22:28:59
+users <- users %>%
+  mutate(LastLoginDate = lubridate::ymd_hms(LastLoginDate)) %>% 
+  mutate(Last.Login = lubridate::mdy_hm(Last.Login)) %>% 
+  mutate(CreatedDate = lubridate::ymd_hms(CreatedDate)) %>% 
+  mutate(Created.Date = lubridate::mdy_hm(Created.Date))
+
 # essentially a left join
-logins<-merge(users, user_logins, by.x = "Id", by.y = "UserId", all = TRUE) #changed from all.x to all
+logins<-merge(users, user_logins, by.x = "Id", by.y = "UserId", all = TRUE) 
 
 ##keep only users created in last 6 months
-logins<-subset(logins, logins$CreatedDate>=as.Date("2021-01-01"))
+logins<-subset(logins, logins$CreatedDate>=as.Date("2021-01-01")) # only 63 observations
 names(logins)
 # logins<-logins[, c(3,5,11,12,14)]
 
 logins_firstlogin <- logins %>%
   group_by(Email, CreatedDate, Profile.Name, UserRole.Name) %>%
-  summarise(
+  summarize(
     MinLoginDate = min(lubridate::ymd_hms(LoginTime), na.rm = T)
   ) %>%
   arrange(Email, CreatedDate, Profile.Name, UserRole.Name) #Min_login is not showing or one with NA
 
-save.image("MonthlyKPI_JM_Dec15.RData")
 ###stopped here 19 April 2021
 # jung mee updates the code 10 December 2021
+
 logins_firstlogin$T2firstlogin<-difftime(as.Date(logins_firstlogin$MinLoginDate), 
                                          as.Date(logins_firstlogin$CreatedDate), units = c("days"))
 logins_firstlogin$createmonth<-month(logins_firstlogin$CreatedDate)
