@@ -39,8 +39,14 @@ format(today, format="%B %d %Y")
 ##STEP 1: Read in the data from Brett
 
 # setwd("U:/WorkSpaces/fkm_data/Program Team KPIs/") 
-Social_Logins <- read_csv("November Splunk Reports/Users,_last_login,_social_studio-2021-12-01.csv")
-MC_Logins <- read_csv("November Splunk Reports/Users,_last_login,_marketing_cloud-2021-12-01.csv")
+# user permission products are at https://arizona.app.box.com/file/890647408744?s=qbdfahyrkr1h7bbnwdv0d7aeb3enrqyb
+# raw splunk data are https://arizona.app.box.com/folder/136731300685?s=hdoh4vuj0syx6oqdvol6t33ilcie9xve
+# but the code needs to recognize folder name and then retrieve the files
+
+# Social_Logins <- read_csv("November Splunk Reports/Users,_last_login,_social_studio-2021-12-01.csv")
+# MC_Logins <- read_csv("November Splunk Reports/Users,_last_login,_marketing_cloud-2021-12-01.csv")
+Social_Logins <- read_csv("social_studio_logins,_last_12_months-2022-01-01.csv")
+MC_Logins <- read_csv("Users,_last_login,_marketing_cloud-2022-01-01.csv")
 
 ##look at data to see format and variables
 glimpse(MC_Logins)
@@ -106,10 +112,8 @@ str(MC_Logins)
 
 #MC_Logins<-subset(MC_Logins, month(as.Date(MC_Logins$"max(timestamp)", "%m/%d/%Y")) == this_month & year(as.Date(MC_Logins$"max(timestamp)", "%m/%d/%Y"))==this_year)
 #Social_Logins<-subset(Social_Logins, month(as.Date(Social_Logins$"max(timestamp)", "%m/%d/%Y")) == this_month & year(as.Date(Social_Logins$"max(timestamp)", "%m/%d/%Y")) == this_year)
-MC_Logins <- subset(MC_Logins, month(as.Date(MC_Logins$"max(timestamp)", "%m/%d/%Y")) 
-                    == last_month & year(as.Date(MC_Logins$"max(timestamp)", "%m/%d/%Y"))==this_year)
-Social_Logins <- subset(Social_Logins, month(as.Date(Social_Logins$"max(timestamp)", "%m/%d/%Y")) 
-                        == last_month & year(as.Date(Social_Logins$"max(timestamp)", "%m/%d/%Y")) == this_year)
+MC_Logins <- subset(MC_Logins, month(as.Date(MC_Logins$"max(timestamp)", "%m/%d/%Y")) == last_month & year(as.Date(MC_Logins$"max(timestamp)", "%m/%d/%Y"))==this_year)
+Social_Logins <- subset(Social_Logins, month(as.Date(Social_Logins$"max(timestamp)", "%m/%d/%Y")) == last_month & year(as.Date(Social_Logins$"max(timestamp)", "%m/%d/%Y")) == this_year)
 
 #users<-subset(user_logins, month(user_logins$LoginTime)== this_month & year(user_logins$LoginTime)==this_year)
 # this yields
@@ -285,49 +289,49 @@ df_fortable$Last.Login.month <- mdy_hm(df_fortable$Last.Login)
 
 df_month <-
   df_fortable %>%
-  mutate(LastLoginMonth = floor_date(as_date(Last.Login.month)))
+  mutate(LastLoginMonth = floor_date(as_date(Last.Login.month), "month"))
 
 # from MC_LastLoginDate
 df_month$MC_lastmonth <- mdy(df_month$MC_LastLoginDate)
 
 df_month <-
   df_month %>% 
-  mutate(MC_last.month.login = floor_date(as_date(MC_lastmonth)))
+  mutate(MC_last.month.login = floor_date(as_date(MC_lastmonth), "month"))
 
 # from SF_LastLoginDate 2020-04-17 23:20:58
 df_month$SF_lastmonth <- ymd_hms(df_month$SF_LastLoginDate)
 
 df_month <-
   df_month %>% 
-  mutate(SF_last.month.login = floor_date(as_date(SF_lastmonth)))
+  mutate(SF_last.month.login = floor_date(as_date(SF_lastmonth), "month"))
 
 # Social_LastLoginDate 11/01/2021
 df_month$Social_lastmonth <- mdy(df_month$Social_LastLoginDate)
 
 df_month <-
   df_month %>% 
-  mutate(Social_last.month.login = floor_date(as_date(Social_lastmonth)))
+  mutate(Social_last.month.login = floor_date(as_date(Social_lastmonth), "month"))
 
 # from LastLogin.x 2020-04-17 23:20:58
 df_month$lastmonth.x <- ymd_hms(df_month$LastLoginDate.x)
 
 df_month <-
   df_month %>% 
-  mutate(last.month.login.x = floor_date(as_date(lastmonth.x)))
+  mutate(last.month.login.x = floor_date(as_date(lastmonth.x), "month"))
 
 # from LastLogin.y 11/29/2021 15:07
 df_month$lastmonth.y <- mdy_hm(df_month$LastLoginDate.y)
 
 df_month <-
   df_month %>% 
-  mutate(last.month.login.y = floor_date(as_date(lastmonth.y)))
+  mutate(last.month.login.y = floor_date(as_date(lastmonth.y), "month"))
 
 # drop the unused variables 
 drop <- c("Last.Login.month","MC_lastmonth", "SF_lastmonth", "Social_lastmonth","lastmonth.x", "lastmonth.y")
 df_month2 = df_month[,!(names(df_month) %in% drop)]
 
 # write to csv
-write.csv(df_month2, paste0(last_month, this_year, ".csv"), row.names = FALSE)
+write.csv(df_month2, paste0(df_month2, last_month, this_year, ".csv"), row.names = FALSE)
 
 #########################################################
 # Linking R to API
@@ -352,6 +356,13 @@ library(Rserve)
 Rserve(args="--vanilla")
 
 # Rserve()
+
+# plot a time series 
+library(ggplot2)
+p <- ggplot(df_month2, aes(x=SF_last.month.login)) +
+  geom_line(aes(fill=..count..), stat="bin", binwidth=1)
+
+p
 #########################################################
 #######################################################
 ##table construction
@@ -431,6 +442,152 @@ write.csv(users_by_unit, paste0("users_by_unit", last_month, this_year, ".csv"),
 write.csv(prds_by_unit, paste0("prds_by_unit", last_month, this_year, ".csv"), row.names = FALSE)
 write.csv(prds_by_unit_reshaped, paste0("prds_by_unit_reshaped", last_month, this_year, ".csv"), row.names = FALSE)
 
+#### merge df_fortable2 to df_foruse on Jan 24, 2022
+setwd("~/Documents/Trellis/CRM-16425/CRM-16425-exploration/Reworking Dec 2021")
+
+df_foruse <- read.csv('df_foruse122021.csv', header = T)
+df_foruse <- select(df_foruse,-c(Id, Academic_Department__c, hed__Affiliation_Type__c))
+
+df_foruse2 <- df_foruse %>%
+  distinct(SF_LastLoginDate, .keep_all = TRUE)
+
+
+df_fortable <- read.csv('df_fortable2_122021.csv')
+df_ortable_Jan25 <- read.csv('df_fortable2_122021_Jan25.csv')
+
+# df_fortable2 <- unique(df_foruse)
+
+# names(df_foruse)
+# df_fortable <- df_foruse[, c(2,5,7,9,14,17,18)]
+# df_fortable<-unique(df_fortable) #1010 to 1146
+
+df_fortable2 <- left_join(df_fortable, df_foruse2, by = c('Email', 'Primary_Department__r.Name', 'MCProfile', 'SocialProfile', 'SFProduct', 'Parent_Organization__c', 'hed__Account__r.Name'))  
+
+df_fortable_Jan25 <- left_join(df_ortable_Jan25, df_foruse, by = c('Email', 'Primary_Department__r.Name', 'SFProduct', 'Parent_Organization__c', 'hed__Account__r.Name'))  
+
+write.csv(df_fortable_Jan25, "df_fortable2_jan25.csv", row.names = FALSE)
+
+
+df_fortable2_non_na <- df_fortable2 %>% 
+  mutate(num_na = is.na(MC_LastLoginDate) + is.na(Social_LastLoginDate) + is.na(SF_LastLoginDate)) %>% 
+  filter(num_na < 3)
+
+# remove cases with NA in all three time stamps
+df_non_na <- df_fortable_Jan25 %>% 
+  mutate(num_na = is.na(MC_LastLoginDate) + is.na(Social_LastLoginDate) + is.na(SF_LastLoginDate)) %>% 
+  filter(num_na < 3)
+
+write.csv(df_non_na, "df_non_na.csv", row.names = FALSE)
+
+df_non_na_No_dates <- df_non_na %>%
+  distinct(Email, Primary_Department__r.Name, SFProduct, Parent_Organization__c, hed__Account__r.Name, .keep_all = TRUE)
+
+write.csv(df_non_na_No_dates, "df_non_na_No_dates.csv", row.names = FALSE)
+
+
+# df_fortable_Jan25 <- df_fortable_Jan25 %>%
+#   distinct(SF_LastLoginDate, .keep_all = TRUE)
+
+# df_fortable2 <- df_fortable2 %>% filter_at(vars(SFCreatedDate, Profile), all_vars(!is.na(.)))
+df_fortable2 %>%group_by(df_fortable2$Profile)%>% tally
+
+write.csv(df_fortable2, "df_fortable2_122021.csv", row.names = FALSE)
+#### different approach
+# df_fortable2 <- df_foruse %>%
+#   group_by(Email, SFProduct, SF_LastLoginDate, MC_LastLoginDate) %>%
+#   mutate(n = n()) %>%
+#   arrange(Email, NetID__c, MDM_Primary_Type__c, Primary_Department__r.Name, MC_LastLoginDate,
+#           MCProfile, Social_LastLoginDate, SocialProfile, SF_LastLoginDate, SFCreatedDate,
+#           Parent_Organization__c, hed__Account__r.Name, desc(n)) %>%
+#   ungroup %>%
+#   distinct(Email, NetID__c, MDM_Primary_Type__c, Primary_Department__r.Name, MC_LastLoginDate,
+#            MCProfile, Social_LastLoginDate, SocialProfile, SF_LastLoginDate, SFCreatedDate,
+#            Parent_Organization__c, hed__Account__r.Name,  .keep_all = TRUE) %>%
+#   select(-n)
+# 
+# 
+# df_fortable3 <- select(df_fortable2, -ends_with("Date")) 
+# write.csv(df_fortable3, "df_fortable3_122021.csv", row.names = FALSE)
+
+# df_fortable4 <- df_foruse %>% 
+#   select(, -ends_with("Date")) 
+
+df_fortable4 <-unique(df_fortable4)
+write.csv(df_fortable4, "df_fortable4_122021.csv", row.names = FALSE)
+
+# tables with df_fortable2
+SFuserscount<-as.data.frame(table(df_fortable2$SFProduct))
+# MCuserscount<-as.data.frame(table(df_fortable$MCProfile))
+MCuserscount<-as.data.frame(table(df_fortable2$MCProfile))
+Socuserscount<-as.data.frame(table(df_fortable2$SocialProfile))
+
+user_counts_by_product<-rbind(SFuserscount, MCuserscount, Socuserscount) 
+colnames(user_counts_by_product)[1]<-"Product/Profile"
+
+##total users by product by unit
+sftest<-df_fortable %>% group_by(Product, Parent_Organization__c) %>% tally() #not SFProduct but Product
+
+SFUC_unit<-as.data.frame(table(df_fortable$Product, by=df_fortable$Parent_Organization__c))
+SFUC_unit<-subset(SFUC_unit, SFUC_unit$Freq!=0)
+
+MCUC_unit<-as.data.frame(table(df_fortable$MCProfile, by=df_fortable$Parent_Organization__c))
+MCUC_unit<-subset(MCUC_unit, MCUC_unit$Freq!=0)
+
+SocUC_unit<-as.data.frame(table(df_fortable$SocialProfile, by=df_fortable$Parent_Organization__c))
+SocUC_unit<-subset(SocUC_unit, SocUC_unit$Freq!=0)
+
+user_cts_by_prd_unit<-rbind(SFUC_unit, MCUC_unit, SocUC_unit)
+
+##total users by unit
+users_by_unit<- user_cts_by_prd_unit %>%
+  group_by(by) %>% 
+  summarise(sum(Freq))
+
+##total products by unit
+prds_by_unit<- user_cts_by_prd_unit %>%
+  group_by(by) %>% 
+  summarise(Total = n())
+
+##reshaped products by unit
+# for_reshape<-user_cts_by_prd_unit[, -c(3)]
+# for_reshape$counter<-1
+# for_reshape<-unique(for_reshape)
+# prds_by_unit_reshaped<-reshape(for_reshape, v.names="counter", timevar="Var1", idvar="by",
+#                                direction="wide")
+# ###make total activity var
+# names(prds_by_unit_reshaped)
+# prds_by_unit_reshaped<-prds_by_unit_reshaped %>% 
+#   #rowwise will make sure the sum operation will occur on each row
+#   rowwise() %>% 
+#   #then a simple sum(..., na.rm=TRUE) is enough to result in what you need
+#   mutate(Total = sum(`counter.Service Desk`, `counter.Marketing - SF`, `counter.Scheduling/Notes`, counter.MC, counter.Social, counter.Events, na.rm=TRUE))
+
+# pivot longer Jung Mee 12/13/2021
+prds_by_unit_reshaped <- user_cts_by_prd_unit %>%
+  group_by(Var1) %>%
+  summarise(nProduct = n_distinct(by))
+
+### rename vars and write tables to files and folder
+# prds_by_unit_reshaped<-rename(prds_by_unit_reshaped, c("Unit/Division" = "by", "MC" = "counter.MC", "Social" = "counter.Social",
+
+prds_by_unit_reshaped <- prds_by_unit_reshaped %>%
+  mutate(Var1 = recode(Var1, "Unit/Division" = "by", "MC" = "counter.MC", "Social" = "counter.Social",
+                       "Scheduling/Notes" = "counter.Scheduling/Notes", 
+                       "Service Desk" = "counter.Service Desk", "Marketing - SF" = "counter.Marketing - SF", 
+                       "Events" = "counter.Events"))
+
+# user_counts_by_product<-rename(user_counts_by_product,  c("Product/Profile" = "Var1"))
+# user_cts_by_prd_unit <- rename(user_cts_by_prd_unit, c("Unit/Division" = "by", "Product/Profile" = "Var1"))
+# users_by_unit<-rename(users_by_unit, c("Unit/Division" = "by", "Total Users"="sum(Freq)"))
+# prds_by_unit<-rename(prds_by_unit, c("Unit/Division" = "by", "Total Products/Profiles" = "Total"))
+
+# setwd<-"U:/WorkSpaces/fkm_data/Program Team KPIs/"
+
+write.csv(user_counts_by_product, paste0("user_counts_by_product", last_month, this_year, ".csv"), row.names = FALSE)
+write.csv(user_cts_by_prd_unit, paste0("user_cts_by_prd_unit", last_month, this_year, ".csv"), row.names = FALSE)
+write.csv(users_by_unit, paste0("users_by_unit", last_month, this_year, ".csv"), row.names = FALSE)
+write.csv(prds_by_unit, paste0("prds_by_unit", last_month, this_year, ".csv"), row.names = FALSE)
+write.csv(prds_by_unit_reshaped, paste0("prds_by_unit_reshaped", last_month, this_year, ".csv"), row.names = FALSE)
 
 ###################################################################################
 ###################################################################################
