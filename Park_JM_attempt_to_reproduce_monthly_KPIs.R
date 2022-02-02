@@ -1,6 +1,6 @@
 # Jung Mee Park
 # attempt to reproduce Francis's tables
-# 2021-01-20
+# 2022-02-02
 
 #SET UP Environment
 library('tidyverse')
@@ -28,7 +28,6 @@ this_year <- year(today)
 last_year <-year(today() - years(1))
 
 format(today, format="%B %d %Y")
-
 
 ############################################
 ##STEP : Import data from SF ------ Paused for now while Brett fixes something
@@ -94,16 +93,19 @@ contact_records <- read.csv("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team
 permissionsets <- read.csv("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/permissionsets12022.csv")
 user_logins <- read.csv("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/user_logins12022.csv")
 users_SF <- read.csv("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/users_SF12022.csv")
+
+user_logins$LoginTime <- as.Date(user_logins$LoginTime)
+
 ############################################
 ##STEP 2: Read in the data from Box Folders
 # splunk reports
 splunk_reports <- list.files("./2022 Splunk Reports")  # Identify file names
 splunk_reports
 
-Social_Logins <- read_csv(paste0(this_year, "/", month.name[last_month], " Splunk Reports/social_studio_logins,_last_12_months-",this_year,"-0",this_month,"-01.csv"))
+#Users,_last_login,_social_studio-2022-02-01
+Social_Logins <- read_csv(paste0(this_year, " Splunk Reports/", month.name[last_month]," ",this_year,"/Users,_last_login,_social_studio-",this_year,"-0",this_month,"-01.csv"))
 # Users,_last_login,_marketing_cloud-2022-02-01
-MC_Logins <- read_csv(paste0(this_year, "/", month.name[last_month], " Splunk Reports/Users,_last_login,_marketing_cloud-",this_year,"-0",this_month,"-01.csv"))
-
+MC_Logins <- read_csv(paste0(this_year, " Splunk Reports/", month.name[last_month]," ",this_year,"/Users,_last_login,_marketing_cloud-",this_year,"-0",this_month,"-01.csv"))
 
 perms2prods<-read_xlsx("20220119_Permissionsets_mapped_to_Products.xlsx") # for Dec
 # perms2prods <- read.csv("Raw data/user_perms_prods.csv") #for other months
@@ -121,12 +123,12 @@ MC_Logins <- MC_Logins[, -c(2)] # to remove "max(timestamp"
 # MC_Logins     
 
 # subset social date
-Social_Logins$social_dates <- as.Date(parse_date_time(Social_Logins$timestamp, c('mdy')))
-Social_Logins <- Social_Logins[, -c(2)] # to remove "timestamp"
+Social_Logins$social_dates <- as.Date(parse_date_time(Social_Logins$"max(timestamp)", c('mdy')))
+Social_Logins <- Social_Logins[, -c(2)] # to remove "max(timestamp)"
 
-Social_Logins_Dec <- Social_Logins[format.Date(Social_Logins$social_dates, "%m")=="12" &
-                                     format.Date(Social_Logins$social_dates, "%Y")=="2021" &
-                                     !is.na(Social_Logins$social_dates),]
+# Social_Logins_Jan <- Social_Logins[format.Date(Social_Logins$social_dates, "%m")=="1" &
+#                     format.Date(Social_Logins$social_dates, "%Y")=="2022" &
+#                     !is.na(Social_Logins$social_dates),]
 # Social_Logins <- Social_Logins_Dec[, -c(2)]
 
 #rename var indicating that login was for a particular tool
@@ -134,9 +136,11 @@ MC_Logins$Profile.Name<-"MC"
 Social_Logins$Profile.Name<-"Social"
 
 # read in users from last month
-users <- read.csv("./2021/December Splunk Reports/MtD Licensed Users Logged In-2021-12-31-17-00-15.csv")
+users <- read.csv("./2022 Splunk Reports/January 2022/MtD Licensed Users Logged In-2022-01-28-17-00-06.csv")
+users <- subset(user_logins, month(user_logins$LoginTime)== last_month & year(user_logins$LoginTime)== 2022)
 
-users<-subset(user_logins, month(user_logins$LoginTime)== last_month & year(user_logins$LoginTime)==2021)
+users<-merge(users_SF,users, by.x = "Id", by.y = "UserId", all = TRUE)
+
 # parse SF users to DEC
 # SF_user_dec <- users_SF[format.Date(users_SF$LastLoginDate, "%m")=="12" &
 #                           format.Date(users_SF$LastLoginDate, "%Y")=="2021" &
@@ -146,30 +150,30 @@ users<-subset(user_logins, month(user_logins$LoginTime)== last_month & year(user
 
 users<-unique(users)
 
-# users %>% group_by(Profile.Name) %>% tally
-users %>% group_by(Profile) %>% tally
+users %>% group_by(Profile.Name) %>% tally # sometimes appears as Profile
+# users %>% group_by(Profile) %>% tally
 
 # subset users 
-users<-subset(users, users$Profile %in% c("Salesforce Base", "Advising Base", "Service Desk Base"))
+users<-subset(users, users$Profile.Name %in% c("Salesforce Base", "Advising Base", "Service Desk Base"))
 users$NetID__c[users$NetID__c=="Mlfink3"]<-"mlfink3"
 
 # save to csv
-write.csv(users, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/users", last_month, last_year, ".csv"), row.names = FALSE)
+write.csv(users, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/merged_users", last_month, this_year, ".csv"), row.names = FALSE)
 
 ##reshape the permissionsets
 names(users)
 names(permissionsets)
 names(perms2prods)
 
-# users_perms<-merge(users, permissionsets, by.x = "Id", by.y = "AssigneeId") # n=576
-users_perms<-merge(users, permissionsets, by.x = "User.ID", by.y = "AssigneeId") # n=3258
+users_perms<-merge(users, permissionsets, by.x = "Id", by.y = "AssigneeId") # n=576
+# users_perms<-merge(users, permissionsets, by.x = "User.ID", by.y = "AssigneeId") # n=3258
 
 users_perms_prods<-merge(users_perms, perms2prods, by.x = "PermissionSet.Name", 
                          by.y = "PermissionSet.Name", all.x = TRUE)
 
 #save to csv
-write.csv(users_perms, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/users_perms", last_month, last_year, ".csv"), row.names = FALSE)
-write.csv(users_perms_prods, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/users_perms_prods", last_month, last_year, ".csv"), row.names = FALSE)
+write.csv(users_perms, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/users_perms", last_month, this_year, ".csv"), row.names = FALSE)
+write.csv(users_perms_prods, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/users_perms_prods", last_month, this_year, ".csv"), row.names = FALSE)
 
 names(users_perms_prods)
 
@@ -177,7 +181,7 @@ names(MC_Logins)
 contact_records<-subset(contact_records, !is.na(contact_records$NetID__c)) # 336090
 
 #save to csv
-write.csv(contact_records, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/contact_records", last_month, last_year, ".csv"), row.names = FALSE)
+write.csv(contact_records, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/contact_records", last_month, this_year, ".csv"), row.names = FALSE)
 
 colnames(MC_Logins)[1]<-"NetID__c"
 # colnames(MC_Logins)[2]<-"LastLoginDate"
@@ -207,27 +211,28 @@ colnames(MC_contacts_social)[11]<-"Social_LastLoginDate" #change from Social_dat
 colnames(MC_contacts_social)[12]<-"SocialProfile" # change from Profile.Name.y
 
 # write csv
-write.csv(MC_contacts_social, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/MC_contacts_social", last_month, last_year, ".csv"), row.names = FALSE)
+write.csv(MC_contacts_social, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/MC_contacts_social", last_month, this_year, ".csv"), row.names = FALSE)
 names(users_perms_prods)
 # upp_clean <- users_perms_prods[, c(1,2,4,7,8,11:13)] # from FKM
 # upp_clean <- users_perms_prods[, -c(1,3,4,6,7,12:15)]
-upp_clean <- users_perms_prods[ , names(users_perms_prods) %in% c("PermissionSet.Name", 
-                                                                  "Username", "User.ID", "Last.Login", "Created.Date", "Profile", "Product")]
+# keep_variables <- c("PermissionSet.Name", "Department", "Username", "NetID__c", "User.ID", "Last.Login",  "Created.Date", "Profile", "Product")
+
+upp_clean <- users_perms_prods[, colnames(users_perms_prods) %in% c("Id","PermissionSet.Name", "Department", "Username", "NetID__c", "LastLoginDate","LoginTime", "CreatedDate", "Profile.Name", "Product")]
 
 upp_clean<-unique(upp_clean)
 # upp_clean<-subset(upp_clean, upp_clean$Profile.Name!="System Administrator")
-upp_clean<-subset(upp_clean, upp_clean$Profile!="System Administrator")
-upp_clean %>% group_by(Profile) %>% tally 
-upp_clean <- subset(upp_clean, !is.na(upp_clean$Product)) #1549
+upp_clean<-subset(upp_clean, upp_clean$Profile!="System Administrator") #36940
+upp_clean %>% group_by(Profile.Name) %>% tally 
+upp_clean <- subset(upp_clean, !is.na(upp_clean$Product)) #18125
 
 # upp_clean <- rename(upp_clean,c("SFUserId" = "Id", "SFCreatedDate" = "CreatedDate", "SFProduct" = "Product"))
-upp_clean <- rename(upp_clean,c("SFUserId" = "User.ID", "SFCreatedDate" = "Created.Date", "SFProduct" = "Product"))
+upp_clean <- rename(upp_clean, c("SFUserId" = "Id", "SFCreatedDate" = "CreatedDate", "SFProduct" = "Product"))
 # MC_s_c_u<-merge(MC_contacts_social, upp_clean, by.x = c("NetID__c"), by.y = c("NetID__c"), all=TRUE)
 
 MC_s_c_u<-merge(MC_contacts_social, upp_clean, by.x = c("Email"), by.y = c("Username"), all=TRUE)
 
 names(MC_s_c_u)
-colnames(MC_s_c_u)[15]<-"SF_LastLoginDate" # change from Last.Login
+colnames(MC_s_c_u)[17]<-"SF_LastLoginDate" # change from Last.Login or LastLoginDate
 names(MC_s_c_u)
 # MC_s_c_u <- MC_s_c_u[, -c(4,5, 7, 16)]
 MC_s_c_u <- MC_s_c_u[ , !names(MC_s_c_u) %in% c("Emplid__c", "hed__Primary_Organization__c",
@@ -239,7 +244,7 @@ length(unique(MC_s_c_u_foruse$Id[MC_s_c_u_foruse$MCProfile=="MC"])) #108
 test<-subset(MC_s_c_u_foruse, MC_s_c_u_foruse$SocialProfile=="Social")
 
 # write to csv
-write.csv(MC_s_c_u_foruse, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/MC_s_c_u_foruse", last_month, last_year, ".csv"), row.names = FALSE)
+write.csv(MC_s_c_u_foruse, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/MC_s_c_u_foruse", last_month, this_year, ".csv"), row.names = FALSE)
 
 #Merge in Affiliations
 names(affiliations)
@@ -248,34 +253,32 @@ affiliation1s <- affiliation1s[, -c(4)] #remove "hed__Primary__c"
 affiliation1s<-distinct(affiliation1s)
 
 # write to csv
-write.csv(affiliation1s, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/affiliation1s", last_month, last_year, ".csv"), row.names = FALSE)
+write.csv(affiliation1s, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/affiliation1s", last_month, this_year, ".csv"), row.names = FALSE)
 
 df_foruse<-merge(MC_s_c_u_foruse, affiliation1s, by.x = "Id", by.y = "hed__Contact__c", all.x = TRUE)
 
-
+library(tidyverse)
 ##take out all Trellis team members from counts
-df_foruse<-subset(df_foruse, !(df_foruse$NetID__c %in% c("sananava", "fkmiller", 
-                                                         "mariovasquez","karamcintyre", "rsrobrahn", "sarceneaux", "krusie",
-                                                         "gestautus", "cynthiavaldez", "puffvu", "cyrusmadrone", "jmpark")))
+df_foruse <- subset(df_foruse, !(df_foruse$NetID__c.x %in% c("sananava", "fkmiller", "jmpark", "mariovasquez","karamcintyre", "rsrobrahn", "sarceneaux", "krusie", "gestautus", "cynthiavaldez", "puffvu", "cyrusmadrone")))
 
 #check outcome
 df_foruse %>%group_by(df_foruse$MCProfile)%>% tally
 length(unique(df_foruse$Email[df_foruse$MCProfile=="MC"]))
 
 # write to csv
-write.csv(df_foruse, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/df_foruse", last_month, last_year, ".csv"), row.names = FALSE)
+write.csv(df_foruse, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/df_foruse", last_month, this_year, ".csv"), row.names = FALSE)
 
 ## drop none logins
 df_foruse_non_na <- df_foruse %>% 
   mutate(num_na = is.na(MC_LastLoginDate) + is.na(Social_LastLoginDate) + is.na(SF_LastLoginDate)) %>% 
   filter(num_na < 3)
 
-# remove non-December social dates
-December_logins <- df_foruse_non_na[format.Date(df_foruse_non_na$Social_LastLoginDate, "%m")=="12" &
-                                      format.Date(df_foruse_non_na$Social_LastLoginDate, "%Y")=="2021" &
-                                      !is.na(df_foruse_non_na$Social_LastLoginDate),]
-# write to csv
-write.csv(December_logins, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/Dec_logins", last_month, last_year, ".csv"), row.names = FALSE)
+# # remove non-specific month social dates
+# Jan22_logins <- df_foruse_non_na[format.Date(df_foruse_non_na$Social_LastLoginDate, "%m")=="1" &
+#                                      format.Date(df_foruse_non_na$Social_LastLoginDate, "%Y")=="2022" &
+#                                      !is.na(df_foruse_non_na$Social_LastLoginDate),]
+# # write to csv
+# write.csv(December_logins, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/Dec_logins", last_month, last_year, ".csv"), row.names = FALSE)
 
 
 #restrict columns to those we need
@@ -284,12 +287,15 @@ names(df_foruse)
 # df_fortable <- df_foruse[, -c(1,2,4,6,8,10,11,12,13,15,16)] #from FKM
 # df_fortable <- df_foruse[, -c(1,4,6,8,13,14,15,16,21,22)] # what jung mee wants to do.
 # df_fortable <- df_foruse[, c(2,4,5,6, 7,8,9,13,14,17,18)]
-df_fortable <- df_foruse[, c(2,5,7,9,13,14,17,18)]
+# df_fortable <- df_foruse[, c(2,5,7,9,13,14,17,18)]
+names(df_foruse)
+df_fortable <- df_foruse %>% select(Email, Primary_Department__r.Name,	MCProfile,
+                                    SocialProfile,SFProduct,Parent_Organization__c,hed__Account__r.Name)
 df_fortable<-unique(df_fortable) # 1145
 
 # df_foruse_non_na
-df_fortable1 <- df_foruse_non_na[, c(2,5,7,9,13,14,17,18)]
-df_fortable1<-unique(df_fortable1) # 1145
+# df_fortable1 <- df_foruse_non_na[, c(2,5,7,9,13,14,17,18)]
+# df_fortable1<-unique(df_fortable1) # 1145
 
 # remove duplicates 
 # df_fortable2 <- df_fortable[!duplicated(df_fortable$Last.Login), ]
@@ -299,7 +305,7 @@ df_fortable1<-unique(df_fortable1) # 1145
 #   dplyr::mutate(count=sum(!(is.na(n))), sum = sum(n, na.rm = T))
 
 # write to csv
-write.csv(df_fortable, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/df_fortable2", last_month, last_year, ".csv"), row.names = FALSE)
+write.csv(df_fortable, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/df_fortable", last_month, this_year, ".csv"), row.names = FALSE)
 
 # df_fortable2 <- df_fortable[df_fortable$hed__Account__r.Name != "Student & Acad Technologies", ] 
 # 
@@ -307,11 +313,11 @@ write.csv(df_fortable, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Te
 
 names(df_fortable)
 # ##total users by product
-SFuserscount<-as.data.frame(table(df_fortable2$SFProduct))
+SFuserscount<-as.data.frame(table(df_fortable$SFProduct))
 # SFuserscount<-as.data.frame(table(df_fortable$Product))
-MCuserscount<-as.data.frame(table(df_fortable2$MCProfile))
+MCuserscount<-as.data.frame(table(df_fortable$MCProfile))
 # MCuserscount<-as.data.frame(table(df_fortable$Profile))
-Socuserscount<-as.data.frame(table(df_fortable2$SocialProfile))
+Socuserscount<-as.data.frame(table(df_fortable$SocialProfile))
 
 user_counts_by_product<-rbind(SFuserscount, MCuserscount, Socuserscount) 
 colnames(user_counts_by_product)[1]<-"Product/Profile"
@@ -370,3 +376,4 @@ write.csv(prds_by_unit, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program T
 write.csv(prds_by_unit_reshaped, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/prds_by_unit_reshaped", last_month, last_year, ".csv"), row.names = FALSE)
 
 #### merge df_fortable2 to df_foruse
+
