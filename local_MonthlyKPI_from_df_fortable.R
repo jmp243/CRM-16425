@@ -59,13 +59,18 @@ df_month2 <- df_month %>%
 # remove redundant columns 
 df_month2 <- unique(df_month2)
 
+# function to write csv
+write_named_csv <- function(x) 
+  write_csv(x, file = paste0(deparse(substitute(x)), ".csv"))
+
 # write csv
 write_named_csv(df_use)
+write_named_csv(df_month2)
 
 names(df_fortable)
 df_fortable <- df_foruse %>% select(Email, Primary_Department__r.Name,	MCProfile,
                                     SocialProfile,SFProduct,Parent_Organization__c,hed__Account__r.Name)
-df_fortable<-unique(df_fortable) # 1145
+df_fortable<-unique(df_fortable) # 1440
 
 #check outcome
 df_foruse %>%group_by(df_foruse$MCProfile)%>% tally
@@ -98,6 +103,15 @@ Socuserscount<-as.data.frame(table(df_fortable$SocialProfile))
 
 user_counts_by_product<-rbind(SFuserscount, MCuserscount, Socuserscount) 
 colnames(user_counts_by_product)[1]<-"Product/Profile"
+
+# using df_month2 for tables
+SFuserscount2<-as.data.frame(table(df_month2$SFProduct))
+# SFuserscount<-as.data.frame(table(df_fortable$Product))
+MCuserscount2<-as.data.frame(table(df_month2$MCProfile))
+# MCuserscount<-as.data.frame(table(df_fortable$Profile))
+Socuserscount2<-as.data.frame(table(df_month2$SocialProfile))
+
+user_counts_by_product2 <- rbind(SFuserscount2, MCuserscount2, Socuserscount2) 
 
 ##total users by product by unit
 sftest<-df_fortable %>% group_by(SFProduct, Parent_Organization__c) %>% tally()
@@ -146,9 +160,9 @@ user_cts_by_prd_unit <- rename(user_cts_by_prd_unit,c("Unit/Division" = "by", "P
 users_by_unit<-rename(users_by_unit, c("Unit/Division" = "by", "Total Users"="sum(Freq)"))
 prds_by_unit<-rename(prds_by_unit, c("Unit/Division" = "by", "Total Products/Profiles" = "Total"))
 
-write.csv(user_counts_by_product, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/user_counts_by_product", last_month, last_year, ".csv"), row.names = FALSE)
-write.csv(user_cts_by_prd_unit, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/user_cts_by_prd_unit", last_month, last_year, ".csv"), row.names = FALSE)
-write.csv(users_by_unit, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/users_by_unit", last_month, last_year, ".csv"), row.names = FALSE)
-write.csv(prds_by_unit, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/prds_by_unit", last_month, last_year, ".csv"), row.names = FALSE)
-write.csv(prds_by_unit_reshaped, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/prds_by_unit_reshaped", last_month, last_year, ".csv"), row.names = FALSE)
+write_named_csv(user_counts_by_product)
+write_named_csv(user_cts_by_prd_unit) #, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/user_cts_by_prd_unit", last_month, last_year, ".csv"), row.names = FALSE)
+write_named_csv(users_by_unit) #, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/users_by_unit", last_month, last_year, ".csv"), row.names = FALSE)
+write_named_csv(prds_by_unit) #, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/prds_by_unit", last_month, last_year, ".csv"), row.names = FALSE)
+write_named_csv(prds_by_unit_reshaped) #, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/prds_by_unit_reshaped", last_month, last_year, ".csv"), row.names = FALSE)
 
