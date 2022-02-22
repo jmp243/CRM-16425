@@ -3,7 +3,7 @@
 # 2022-02-02
 # for local use
 
-#SET UP Environment
+### SET UP Environment ###
 library('tidyverse')
 library(dbplyr)
 library('readxl')
@@ -11,6 +11,8 @@ library('salesforcer')
 # library('RForcecom') # not available in this version of R on 08 Dec 2021
 library('lubridate')
 library(reshape2)
+library(seplyr)
+library(pointblank)
 
 ### check working directory
 getwd() #figure out the working directory
@@ -32,6 +34,7 @@ format(today, format="%B %d %Y")
 # read in foruse and fortable
 df_foruse <- read.csv("df_foruse12022.csv")
 df_fortable <- read.csv("df_fortable12022.csv")
+df_month2 <- read.csv("df_month212022.csv")
 
 # check df_foruse
 names(df_foruse)
@@ -61,7 +64,7 @@ df_month2 <- unique(df_month2)
 
 # function to write csv
 write_named_csv <- function(x) 
-  write_csv(x, file = paste0(deparse(substitute(x)), ".csv"))
+  write_csv(x, file = paste0(deparse(substitute(x)), last_month, this_year,".csv"))
 
 # write csv
 write_named_csv(df_use)
