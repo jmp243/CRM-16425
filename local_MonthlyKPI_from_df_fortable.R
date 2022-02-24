@@ -3,7 +3,7 @@
 # 2022-02-02
 # for local use
 
-### SET UP Environment ###
+#### SET UP Environment ####
 library('tidyverse')
 library(dbplyr)
 library('readxl')
@@ -14,7 +14,7 @@ library(reshape2)
 library(seplyr)
 library(pointblank)
 
-### check working directory
+#### check working directory ####
 getwd() #figure out the working directory
 setwd("~/Documents/Trellis/CRM-16425/CRM-16425-exploration/Jan2022 data")
 
@@ -23,7 +23,7 @@ options(digits=3)
 
 today <- Sys.Date()
 
-#capture current month
+####capture current month####
 this_month <- month(today)
 last_month<-month(today() - months(1))
 this_year <- year(today)
@@ -31,21 +31,30 @@ last_year <-year(today() - years(1))
 
 format(today, format="%B %d %Y")
 
-# read in foruse and fortable
+####function to write csv####
+write_named_csv <- function(x) 
+  write_csv(x, file = paste0(deparse(substitute(x)), last_month, this_year,".csv"))
+
+####read in csv####
 df_foruse <- read.csv("df_foruse12022.csv")
 df_fortable <- read.csv("df_fortable12022.csv")
 df_month2 <- read.csv("df_month212022.csv")
 
-# check df_foruse
+#### removing Student & Acad Technologies ####
+df_foruse <- df_month2[df_month2$hed__Account__r.Name != "Student & Acad Technologies", ] 
+
+####check df_foruse####
 names(df_foruse)
-df_use <- df_foruse %>% 
-  select(-Id, -NetID__c.x, -NetID__c.y, -SFUserId, -Academic_Department__c)
+df_foruse <- df_foruse %>% 
+  # select(-NetID__c.x, -NetID__c.y, -SFUserId, -Academic_Department__c) %>% 
+  # select(-SFUserId, -Academic_Department__c) %>% 
+  #remove redundant columns
+  distinct() 
 
-# remove redundant columns
-df_use <- unique(df_use)
 
-names(df_use)
-# floor the dates to all Jan 2022
+write_named_csv(df_foruse)
+
+####floor the dates to all Jan 2022####
 df_month <- df_use %>%
   mutate(MCLoginMonth = floor_date(as_date(MC_LastLoginDate), "month")) %>% 
   mutate(SFLoginMonth = floor_date(as_date(SF_LastLoginDate), "month")) %>% 
@@ -62,11 +71,8 @@ df_month2 <- df_month %>%
 # remove redundant columns 
 df_month2 <- unique(df_month2)
 
-# function to write csv
-write_named_csv <- function(x) 
-  write_csv(x, file = paste0(deparse(substitute(x)), last_month, this_year,".csv"))
 
-# write csv
+#### write csv
 write_named_csv(df_use)
 write_named_csv(df_month2)
 
@@ -76,7 +82,7 @@ df_fortable <- df_foruse %>% select(Email, Primary_Department__r.Name,	MCProfile
 df_fortable<-unique(df_fortable) # 1440
 
 #check outcome
-df_foruse %>%group_by(df_foruse$MCProfile)%>% tally
+df_foruse %>% count(df_foruse$MCProfile)
 length(unique(df_foruse$Email[df_foruse$MCProfile=="MC"]))
 
 ## drop none logins
@@ -95,26 +101,26 @@ df_foruse_non_na <- df_foruse %>%
 # write to csv
 # write.csv(df_fortable, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/df_fortable", last_month, this_year, ".csv"), row.names = FALSE)
 
-
 names(df_fortable)
-# ##total users by product
+####total users by product####
 SFuserscount<-as.data.frame(table(df_fortable$SFProduct))
-# SFuserscount<-as.data.frame(table(df_fortable$Product))
-MCuserscount<-as.data.frame(table(df_fortable$MCProfile))
-# MCuserscount<-as.data.frame(table(df_fortable$Profile))
-Socuserscount<-as.data.frame(table(df_fortable$SocialProfile))
+MCuserscount_t<- df_fortable %>%
+  group_by(Email.x, MCProfile) %>% 
+  summarise(Total = n())
+View(MCuserscount_t)
+MCuserscount<-as.data.frame(table(df_fortable$MCuserscount_t))
+View(MCuserscount)
+MCuserscount_t<-subset(MCuserscount_t, !is.na(MCuserscount_t$MCProfile))
+MCuserscount<-as.data.frame(table(MCuserscount_t$Email.x))
+MCuserscount<-as.data.frame(table(MCuserscount_t$MCProfile))
+Socuserscount_t<- df_fortable %>%
+  group_by(Email.x, SocialProfile) %>% 
+  summarise(Total = n())
+Socuserscount_t<-subset(Socuserscount_t, !is.na(Socuserscount_t$SocialProfile))
+Socuserscount<-as.data.frame(table(Socuserscount_t$SocialProfile))
+View(Socuserscount)
+user_counts_by_product<-rbind(SFuserscount, MCuserscount, Socuserscount)
 
-user_counts_by_product<-rbind(SFuserscount, MCuserscount, Socuserscount) 
-colnames(user_counts_by_product)[1]<-"Product/Profile"
-
-# using df_month2 for tables
-SFuserscount2<-as.data.frame(table(df_month2$SFProduct))
-# SFuserscount<-as.data.frame(table(df_fortable$Product))
-MCuserscount2<-as.data.frame(table(df_month2$MCProfile))
-# MCuserscount<-as.data.frame(table(df_fortable$Profile))
-Socuserscount2<-as.data.frame(table(df_month2$SocialProfile))
-
-user_counts_by_product2 <- rbind(SFuserscount2, MCuserscount2, Socuserscount2) 
 
 ##total users by product by unit
 sftest<-df_fortable %>% group_by(SFProduct, Parent_Organization__c) %>% tally()
