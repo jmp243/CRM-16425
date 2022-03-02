@@ -2,6 +2,7 @@
 # attempt to reproduce Francis's tables
 # 2022-02-02
 # for local use
+# last updated 2022-03-02
 
 #### SET UP Environment ####
 library('tidyverse')
@@ -13,10 +14,12 @@ library('lubridate')
 library(reshape2)
 library(seplyr)
 library(pointblank)
-
+library(kableExtra) # added 2022-02-25
+library(knitr)
+library(janitor)
 #### check working directory ####
 getwd() #figure out the working directory
-setwd("~/Documents/Trellis/CRM-16425/CRM-16425-exploration/Jan2022 data")
+setwd("~/Documents/Trellis/CRM-16425/CRM-16425-exploration/Feb2022 data")
 
 rm(list=ls(all=TRUE)) 
 options(digits=3)
@@ -36,12 +39,16 @@ write_named_csv <- function(x)
   write_csv(x, file = paste0(deparse(substitute(x)), last_month, this_year,".csv"))
 
 ####read in csv####
-df_foruse <- read.csv("df_foruse12022.csv")
-df_fortable <- read.csv("df_fortable12022.csv")
-df_month2 <- read.csv("df_month212022.csv")
+# df_foruse <- read.csv("df_foruse12022.csv") # foruse limited variables and took out admin accts
+# df_fortable <- read.csv("df_fortable12022.csv") 
+# df_month2 <- read.csv("df_month212022.csv")
+df_month2 <- read.csv("df_month222022.csv")
+df_foruse <- read.csv("df_foruse22022.csv")
+df_foruse_non_na <- read.csv("df_foruse_non_na22022.csv")
+MC_s_c_u_foruse <- read.csv("MC_s_c_u_foruse22022.csv")
 
 #### removing Student & Acad Technologies ####
-df_foruse <- df_month2[df_month2$hed__Account__r.Name != "Student & Acad Technologies", ] 
+# df_foruse <- df_month2[df_month2$hed__Account__r.Name != "Student & Acad Technologies", ] 
 
 ####check df_foruse####
 names(df_foruse)
@@ -71,7 +78,6 @@ df_month2 <- df_month %>%
 # remove redundant columns 
 df_month2 <- unique(df_month2)
 
-
 #### write csv
 write_named_csv(df_use)
 write_named_csv(df_month2)
@@ -79,7 +85,7 @@ write_named_csv(df_month2)
 names(df_fortable)
 df_fortable <- df_foruse %>% select(Email, Primary_Department__r.Name,	MCProfile,
                                     SocialProfile,SFProduct,Parent_Organization__c,hed__Account__r.Name)
-df_fortable<-unique(df_fortable) # 1440
+df_fortable<-unique(df_fortable) # 837
 
 #check outcome
 df_foruse %>% count(df_foruse$MCProfile)
@@ -101,26 +107,112 @@ df_foruse_non_na <- df_foruse %>%
 # write to csv
 # write.csv(df_fortable, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/df_fortable", last_month, this_year, ".csv"), row.names = FALSE)
 
-names(df_fortable)
-####total users by product####
+#### FKM total users by product####
 SFuserscount<-as.data.frame(table(df_fortable$SFProduct))
 MCuserscount_t<- df_fortable %>%
-  group_by(Email.x, MCProfile) %>% 
+  group_by(Email, MCProfile) %>% 
   summarise(Total = n())
-View(MCuserscount_t)
+# View(MCuserscount_t)
 MCuserscount<-as.data.frame(table(df_fortable$MCuserscount_t))
-View(MCuserscount)
+# View(MCuserscount)
 MCuserscount_t<-subset(MCuserscount_t, !is.na(MCuserscount_t$MCProfile))
-MCuserscount<-as.data.frame(table(MCuserscount_t$Email.x))
+MCuserscount<-as.data.frame(table(MCuserscount_t$Email))
 MCuserscount<-as.data.frame(table(MCuserscount_t$MCProfile))
 Socuserscount_t<- df_fortable %>%
-  group_by(Email.x, SocialProfile) %>% 
+  group_by(Email, SocialProfile) %>% 
   summarise(Total = n())
 Socuserscount_t<-subset(Socuserscount_t, !is.na(Socuserscount_t$SocialProfile))
 Socuserscount<-as.data.frame(table(Socuserscount_t$SocialProfile))
-View(Socuserscount)
+# View(Socuserscount)
 user_counts_by_product<-rbind(SFuserscount, MCuserscount, Socuserscount)
 
+#### JMP attempt total users by products ####
+# MCProfile_df <- df_fortable_non_na[!(is.na(df_fortable_non_na$MCProfile) | df_fortable_non_na$MCProfile==""), ]
+MCProfile_df1 <- df_foruse_non_na[!(is.na(df_foruse_non_na$MCProfile) | df_foruse_non_na$MCProfile==""), ]
+MC_count1 <- unique(as.data.frame(table(MCProfile_df1$Email))) #69 
+
+MC_count1 <- MCProfile_df %>% 
+  group_by(Email) %>%
+  # summarise(Total = n())
+  summarise(MC_count = n_distinct(MCProfile)) #170 instances of MC but there are 69 distinct emails
+
+# data %>%                    # take the data.frame "data"
+#   filter(!is.na(aa)) %>%    # Using "data", filter out all rows with NAs in aa 
+#   group_by(bb) %>%          # Then, with the filtered data, group it by "bb"
+#   summarise(Unique_Elements = n_distinct(aa))   # Now summarise with unique elements per group
+
+df_foruse_non_na  %>%
+  tabyl(MCProfile, SocialProfile, show_missing_levels = FALSE) %>%
+  adorn_totals("row") %>%
+  adorn_percentages("all") %>%
+  adorn_pct_formatting(digits = 1) %>%
+  adorn_ns %>%
+  adorn_title
+
+SocialProfile_df <- df_month2[!(is.na(df_month2$SocialProfile) | df_month2$SocialProfile==""), ]
+Socialcount<-as.data.frame(table(SocialProfile_df$Email)) #15
+
+df_foruse_non_na %>%                    # take the data.frame "data"
+  filter(!is.na(SocialProfile)) %>%    # Using "data", filter out all rows with NAs in aa
+  group_by(Email) %>%          # Then, with the filtered data, group it by "bb"
+  summarise(Unique_Elements = n_distinct(Email))   # Now summarise with unique elements per group
+# only be 15
+
+# Select only SF Product == SAFER
+df_foruse_non_na %>% 
+  filter(SFProduct=="SAFER") %>% 
+  # summarise(Email_count = n_distinct(Email)) %>% 
+  count(Primary_Department__r.Name, Profile.Name)
+  # summarise(n = length(uniqe(Email))) #83 emails are associated with it
+
+df_foruse_non_na %>%                    # take the data.frame "data"
+  filter(!is.na(SFProduct)) %>%    # Using "data", filter out all rows with NAs in aa
+  group_by(SFProduct, Email) %>%          # Then, with the filtered data, group it by "bb"
+  summarise(Unique_Elements = n_distinct(SFProduct)) %>% # Now summarise with unique elements per group
+  mutate(Freq = Unique_Elements/sum(Unique_Elements))
+
+#### Usable User Count Table ####
+#SFuserscount<-as.data.frame(table(df_fortable$SFProduct))
+SFProduct_count <- df_foruse_non_na%>% 
+  filter(!is.na(SFProduct)) %>%
+  dplyr::distinct(Email, SFProduct) %>%
+  group_by(SFProduct) %>% 
+  summarize(Freq = n()) %>% 
+  ungroup()
+
+MCProfile_count <- df_foruse_non_na%>% 
+  filter(!is.na(MCProfile)) %>%
+  dplyr::distinct(Email, MCProfile) %>%
+  group_by(MCProfile) %>% 
+  summarize(Freq = n())%>% 
+  ungroup()
+
+SocialProfile_count <- df_foruse_non_na%>% 
+  filter(!is.na(SocialProfile)) %>%
+  dplyr::distinct(Email, SocialProfile) %>%
+  group_by(SocialProfile) %>% 
+  summarize(Freq = n())%>% 
+  ungroup()
+
+# bind the tables
+colnames(MCProfile_count)[1]<-"Product/Profile"
+colnames(SocialProfile_count)[1]<-"Product/Profile"
+colnames(SFProduct_count)[1]<-"Product/Profile"
+user_counts_by_product<-rbind(SFProduct_count, MCProfile_count, SocialProfile_count)
+
+## alternatively
+df_foruse_non_na%>% 
+  filter(!is.na(SFProduct)) %>%
+  dplyr::distinct(Email, SFProduct) %>%
+  group_by(SFProduct) %>% 
+  tabyl(SFProduct)
+
+df_foruse_non_na %>%                    # take the data.frame "data"
+  filter(!is.na(SocialProfile)) %>%    # Using "data", filter out all rows with NAs in aa
+  group_by(Email) %>%          # Then, with the filtered data, group it by "bb"
+  summarise(Unique_Elements = n_distinct(Email)) %>% 
+  tabyl(Unique_Elements)# Now summarise with unique elements per group
+# only be 15
 
 ##total users by product by unit
 sftest<-df_fortable %>% group_by(SFProduct, Parent_Organization__c) %>% tally()
