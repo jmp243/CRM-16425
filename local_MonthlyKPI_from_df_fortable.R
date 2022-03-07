@@ -42,70 +42,109 @@ write_named_csv <- function(x)
 # df_foruse <- read.csv("df_foruse12022.csv") # foruse limited variables and took out admin accts
 # df_fortable <- read.csv("df_fortable12022.csv") 
 # df_month2 <- read.csv("df_month212022.csv")
-df_month2 <- read.csv("df_month222022.csv")
+# df_month2 <- read.csv("df_month222022.csv")
 df_foruse <- read.csv("df_foruse22022.csv")
-df_foruse_non_na <- read.csv("df_foruse_non_na22022.csv")
+df_fortable <- read.csv("df_fortable22022.csv")
+# df_foruse_non_na <- read.csv("df_foruse_non_na22022.csv")
 MC_s_c_u_foruse <- read.csv("MC_s_c_u_foruse22022.csv")
 
+#### testing out the tables ####
+df_foruse %>% 
+  distinct(Email,MCProfile) %>%
+  group_by(MCProfile) %>% 
+  count()%>% 
+  ungroup() # n=150 
+df_foruse %>% 
+  distinct(Email, SocialProfile) %>%
+  group_by(SocialProfile) %>% 
+  count()%>% 
+  ungroup() # n=82
+df_foruse %>% 
+  distinct(Email, SFProduct) %>%
+  group_by(SFProduct) %>% 
+  count()%>% 
+  ungroup() 
 #### removing Student & Acad Technologies ####
 # df_foruse <- df_month2[df_month2$hed__Account__r.Name != "Student & Acad Technologies", ] 
 
-####check df_foruse####
-names(df_foruse)
-df_foruse <- df_foruse %>% 
-  # select(-NetID__c.x, -NetID__c.y, -SFUserId, -Academic_Department__c) %>% 
-  # select(-SFUserId, -Academic_Department__c) %>% 
-  #remove redundant columns
-  distinct() 
+#### testing out the tables ####
+df_fortable %>% 
+  distinct(Email,MCProfile) %>%
+  group_by(MCProfile) %>% 
+  count()%>% 
+  ungroup() # n=150 
+df_fortable %>% 
+  distinct(Email, SocialProfile) %>%
+  group_by(SocialProfile) %>% 
+  count()%>% 
+  ungroup() # n=82
 
+# df_subset_date <- df_fortable %>% 
+#   dplyr::filter(SF_LastLoginDate >= "2022-02-01" & SF_LastLoginDate <="2022-02-28") %>% 
+#   distinct()
 
-write_named_csv(df_foruse)
-
-####floor the dates to all Jan 2022####
-df_month <- df_use %>%
-  mutate(MCLoginMonth = floor_date(as_date(MC_LastLoginDate), "month")) %>% 
-  mutate(SFLoginMonth = floor_date(as_date(SF_LastLoginDate), "month")) %>% 
-  mutate(SocialLoginMonth = floor_date(as_date(Social_LastLoginDate), "month")) %>% 
-  mutate(LastLoginTime = floor_date(as_date(LoginTime), "month"))
-
-df_month <- df_month %>% 
-  select(-MC_LastLoginDate, -SF_LastLoginDate, -Social_LastLoginDate, -LoginTime)
-
-df_month2 <- df_month %>%
-  # filter(FL_DATE >= as.Date("2014-01-05"))
-  filter(SFLoginMonth >= as.Date("2022-01-01"))
-
-# remove redundant columns 
-df_month2 <- unique(df_month2)
-
-#### write csv
-write_named_csv(df_use)
-write_named_csv(df_month2)
-
-names(df_fortable)
-df_fortable <- df_foruse %>% select(Email, Primary_Department__r.Name,	MCProfile,
-                                    SocialProfile,SFProduct,Parent_Organization__c,hed__Account__r.Name)
-df_fortable<-unique(df_fortable) # 837
-
-#check outcome
-df_foruse %>% count(df_foruse$MCProfile)
-length(unique(df_foruse$Email[df_foruse$MCProfile=="MC"]))
-
-## drop none logins
-df_foruse_non_na <- df_foruse %>% 
-  mutate(num_na = is.na(MC_LastLoginDate) + is.na(Social_LastLoginDate) + is.na(SF_LastLoginDate)) %>% 
-  filter(num_na < 3)
-
-
-# remove duplicates 
-# df_fortable2 <- df_fortable[!duplicated(df_fortable$Last.Login), ]
-# df_fortable2<-unique(df_fortable2)
-# df_fortable2 <- df_fortable %>% 
-#   group_by(SFProduct) %>% 
-#   dplyr::mutate(count=sum(!(is.na(n))), sum = sum(n, na.rm = T))
-
-# write to csv
-# write.csv(df_fortable, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/df_fortable", last_month, this_year, ".csv"), row.names = FALSE)
+df_fortable %>% 
+  dplyr::filter(SF_LastLoginDate >= "2022-02-01" & SF_LastLoginDate <="2022-02-28") %>% 
+  distinct(Email, SFProduct) %>% 
+  group_by(SFProduct) %>% 
+  count() %>% 
+  ungroup() 
+# ####check df_foruse####
+# names(df_foruse)
+# df_foruse <- df_foruse %>% 
+#   # select(-NetID__c.x, -NetID__c.y, -SFUserId, -Academic_Department__c) %>% 
+#   # select(-SFUserId, -Academic_Department__c) %>% 
+#   #remove redundant columns
+#   distinct() 
+# 
+# 
+# write_named_csv(df_foruse)
+# 
+# ####floor the dates to all Jan 2022####
+# df_month <- df_use %>%
+#   mutate(MCLoginMonth = floor_date(as_date(MC_LastLoginDate), "month")) %>% 
+#   mutate(SFLoginMonth = floor_date(as_date(SF_LastLoginDate), "month")) %>% 
+#   mutate(SocialLoginMonth = floor_date(as_date(Social_LastLoginDate), "month")) %>% 
+#   mutate(LastLoginTime = floor_date(as_date(LoginTime), "month"))
+# 
+# df_month <- df_month %>% 
+#   select(-MC_LastLoginDate, -SF_LastLoginDate, -Social_LastLoginDate, -LoginTime)
+# 
+# df_month2 <- df_month %>%
+#   # filter(FL_DATE >= as.Date("2014-01-05"))
+#   filter(SFLoginMonth >= as.Date("2022-01-01"))
+# 
+# # remove redundant columns 
+# df_month2 <- unique(df_month2)
+# 
+# #### write csv
+# write_named_csv(df_use)
+# write_named_csv(df_month2)
+# 
+# names(df_fortable)
+# df_fortable <- df_foruse %>% select(Email, Primary_Department__r.Name,	MCProfile,
+#                                     SocialProfile,SFProduct,Parent_Organization__c,hed__Account__r.Name)
+# df_fortable<-unique(df_fortable) # 837
+# 
+# #check outcome
+# df_foruse %>% count(df_foruse$MCProfile)
+# length(unique(df_foruse$Email[df_foruse$MCProfile=="MC"]))
+# 
+# ## drop none logins
+# df_foruse_non_na <- df_foruse %>% 
+#   mutate(num_na = is.na(MC_LastLoginDate) + is.na(Social_LastLoginDate) + is.na(SF_LastLoginDate)) %>% 
+#   filter(num_na < 3)
+# 
+# 
+# # remove duplicates 
+# # df_fortable2 <- df_fortable[!duplicated(df_fortable$Last.Login), ]
+# # df_fortable2<-unique(df_fortable2)
+# # df_fortable2 <- df_fortable %>% 
+# #   group_by(SFProduct) %>% 
+# #   dplyr::mutate(count=sum(!(is.na(n))), sum = sum(n, na.rm = T))
+# 
+# # write to csv
+# # write.csv(df_fortable, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/df_fortable", last_month, this_year, ".csv"), row.names = FALSE)
 
 #### FKM total users by product####
 SFuserscount<-as.data.frame(table(df_fortable$SFProduct))
