@@ -89,6 +89,20 @@ df_fortable %>%
   group_by(SFProduct) %>% 
   count() %>% 
   ungroup() 
+
+# pivot longer to produce a table
+library(data.table)
+df_fortable %>% 
+  group_by(Email) %>%
+  summarise_each(funs(sum), - MCProfile, - SocialProfile, - SFProduct) %>% 
+  gather(Var, Val, - Date_Range) %>%
+  group_by(Date_Range) %>% 
+  mutate(ind = row_number()) %>% 
+  spread(Date_Range, Val)
+
+df_fortable %>%
+  group_by(Email, SFProduct, MCProfile, SocialProfile) %>% 
+  summarize(Freq = count())
 # ####check df_foruse####
 # names(df_foruse)
 # df_foruse <- df_foruse %>% 
@@ -146,23 +160,59 @@ df_fortable %>%
 # # write to csv
 # # write.csv(df_fortable, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/df_fortable", last_month, this_year, ".csv"), row.names = FALSE)
 
-#### FKM total users by product####
-SFuserscount<-as.data.frame(table(df_fortable$SFProduct))
+
+# make one long table with MCProfile, SocialProfile, and SFProduct
+head(df_fortable)
+# pivoting to make a new dataframe
+product_longer <- df_fortable %>% 
+  pivot_longer(cols = c(MCProfile, SocialProfile, SFProduct),
+               names_to = "col_name", 
+               values_to = "SFProduct/MC/Social") %>% 
+  drop_na("SFProduct/MC/Social") %>% 
+  distinct()
+
+write_named_csv(product_longer)
+
+# old way to merge
+SFuserscount_t<- df_fortable %>%
+  dplyr::filter(SF_LastLoginDate >= "2022-02-01" & SF_LastLoginDate <="2022-02-28") %>% 
+  group_by(Email, SFProduct) %>% 
+  summarise(Total = n())
+
 MCuserscount_t<- df_fortable %>%
   group_by(Email, MCProfile) %>% 
   summarise(Total = n())
+Socuserscount_t<- df_fortable %>%
+  group_by(Email, SocialProfile) %>% 
+  summarise(Total = n())
+colnames(MCuserscount_t)[2]<-"SFProduct" #change from MC 
+colnames(Socuserscount_t)[2]<-"SFProduct" #change from Social
+products_table <- rbind(SFuserscount_t, MCuserscount_t, Socuserscount_t)
+
+write_named_csv(products_table)
+# merge dataset with different variables 
+products_table_df <- left_join(products_table, df_fortable, by = "Email")
+
+# drop columns
+products_table_df2 <- products_table_df[, !colnames(products_table_df) %in% c("Total", "Username")]
+
+# rename the column
+colnames(products_table_df2)[2]<-"SFProduct/MC/Social" #SFProduct.x
+
+write_named_csv(products_table_df2)
+
+#### FKM total users by product####
+SFuserscount<-as.data.frame(table(df_fortable$SFProduct))
+
 # View(MCuserscount_t)
 MCuserscount<-as.data.frame(table(df_fortable$MCuserscount_t))
 # View(MCuserscount)
 MCuserscount_t<-subset(MCuserscount_t, !is.na(MCuserscount_t$MCProfile))
 MCuserscount<-as.data.frame(table(MCuserscount_t$Email))
 MCuserscount<-as.data.frame(table(MCuserscount_t$MCProfile))
-Socuserscount_t<- df_fortable %>%
-  group_by(Email, SocialProfile) %>% 
-  summarise(Total = n())
+
 Socuserscount_t<-subset(Socuserscount_t, !is.na(Socuserscount_t$SocialProfile))
 Socuserscount<-as.data.frame(table(Socuserscount_t$SocialProfile))
-# View(Socuserscount)
 user_counts_by_product<-rbind(SFuserscount, MCuserscount, Socuserscount)
 
 #### JMP attempt total users by products ####
