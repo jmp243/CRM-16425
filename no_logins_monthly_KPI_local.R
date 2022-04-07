@@ -81,16 +81,32 @@ Social_Logins <- read_csv(paste0(this_year, " Splunk Reports/", month.name[last_
                                  " ",this_year,"/Users,_last_login,_social_studio-",
                                  this_year,"-0",this_month,"-01.csv"))
 # Users,_last_login,_marketing_cloud-2022-03-01
-MC_Logins <- read_csv(paste0(this_year, " Splunk Reports/", month.name[last_month],
-                             " ",this_year,"/Users,_last_login,_marketing_cloud-",
-                             this_year,"-0",this_month,"-01.csv"))
+# MC_Logins <- read_csv(paste0(this_year, " Splunk Reports/", month.name[last_month],
+#                              " ",this_year,"/Users,_last_login,_marketing_cloud-",
+#                              this_year,"-0",this_month,"-01.csv"))
+
+MC_Logins <- read.csv("marketing_users_April7_2022.csv")
+
+# # create a netid column
+# library(stringr)
+# library(stringi)
+# 
+# MC_Logins$NetID__c <- stri_match_first_regex(MC_Logins$Email, "(.*?)\\@")[,2]
 
 #rename var indicating that login was for a particular tool
 MC_Logins$Profile.Name<-"MC"
 Social_Logins$Profile.Name<-"Social"
 
-colnames(MC_Logins)[1]<-"NetID__c"
+# colnames(MC_Logins)[1]<-"NetID__c"
 colnames(Social_Logins)[1]<-"NetID__c"
+
+# drop some columns from MC
+names(MC_Logins)
+MC_Logins <- MC_Logins[,-c(1,2, 6,7)]
+colnames(MC_Logins)[1]<-"Email" # change campaign.member.email to email
+colnames(MC_Logins)[2]<-"NetID__c"
+
+
 
 # users <- read.csv("./2022 Splunk Reports/February 2022/MtD Licensed Users Logged In-2022-02-25-17-00-06.csv")
 
@@ -182,6 +198,25 @@ df_foruse2 <- df_foruse %>%
   distinct()
 
 write_named_csv(df_foruse2)
+
+#### read csv for March 2022 ####
+getwd()
+setwd("~/Documents/Trellis/CRM-16425/CRM-16425-exploration/Mar 2022 data")
+MC_s_c_u2 <- read.csv("Mar 2022 dataMC_s_c_u232022.csv")
+df_foruse2 <- read.csv("Mar 2022 datadf_foruse232022.csv")
+df_fortable <- read.csv("Mar 2022 datadf_fortable32022.csv")
+
+# drop MC's and add in new ones
+df_foruse3 <-df_foruse2[!(df_foruse2$MC.Social.SFProduct=="MC"),]
+
+# # pivot wider 
+# # create multiple columns for Trellis Products
+# product_wider <- df_foruse3 %>% 
+#   pivot_wider(cols = c(Profile.Name.x, Profile.Name.y, Product),
+#                names_to = "col_name", 
+#                values_to = "MC-Social-SFProduct") %>% 
+#   drop_na("MC-Social-SFProduct") %>% 
+#   distinct()
 
 # count unique
 df_foruse2 %>% 
