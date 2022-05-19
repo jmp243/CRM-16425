@@ -19,7 +19,7 @@ library(knitr)
 library(janitor)
 #### check working directory ####
 getwd() #figure out the working directory
-setwd("~/Documents/Trellis/CRM-16425/CRM-16425-exploration/Feb2022 data")
+setwd("~/Documents/Trellis/CRM-16425/CRM-16425-exploration/Apr2022 data")
 
 rm(list=ls(all=TRUE)) 
 options(digits=3)
@@ -43,25 +43,26 @@ write_named_csv <- function(x)
 # df_fortable <- read.csv("df_fortable12022.csv") 
 # df_month2 <- read.csv("df_month212022.csv")
 # df_month2 <- read.csv("df_month222022.csv")
-df_foruse <- read.csv("df_foruse22022.csv")
-df_fortable <- read.csv("df_fortable22022.csv")
-# df_foruse_non_na <- read.csv("df_foruse_non_na22022.csv")
-MC_s_c_u_foruse <- read.csv("MC_s_c_u_foruse22022.csv")
+df_foruse <- read.csv("df_foruse242022.csv")
+df_fortable <- read.csv("df_fortable42022.csv")
+# df_foruse_non_na <- read.csv("df_foruse_non_na42022.csv")
+# MC_s_c_u_foruse <- read.csv("MC_s_c_u_foruse42022.csv")
+MC_s_c_u <- read.csv("MC_s_c_u242022.csv")
 
 #### testing out the tables ####
+# df_foruse %>% 
+#   distinct(Email,MCProfile) %>%
+#   group_by(MCProfile) %>% 
+#   count()%>% 
+#   ungroup() # n=150 
+# df_foruse %>% 
+#   distinct(Email, SocialProfile) %>%
+#   group_by(SocialProfile) %>% 
+#   count()%>% 
+#   ungroup() # n=82
 df_foruse %>% 
-  distinct(Email,MCProfile) %>%
-  group_by(MCProfile) %>% 
-  count()%>% 
-  ungroup() # n=150 
-df_foruse %>% 
-  distinct(Email, SocialProfile) %>%
-  group_by(SocialProfile) %>% 
-  count()%>% 
-  ungroup() # n=82
-df_foruse %>% 
-  distinct(Email, SFProduct) %>%
-  group_by(SFProduct) %>% 
+  distinct(Name, MC.Social.SFProduct) %>%
+  group_by(MC.Social.SFProduct) %>% 
   count()%>% 
   ungroup() 
 #### removing Student & Acad Technologies ####
@@ -82,7 +83,6 @@ df_fortable %>%
 # df_subset_date <- df_fortable %>% 
 #   dplyr::filter(SF_LastLoginDate >= "2022-02-01" & SF_LastLoginDate <="2022-02-28") %>% 
 #   distinct()
-
 df_fortable %>% 
   dplyr::filter(SF_LastLoginDate >= "2022-02-01" & SF_LastLoginDate <="2022-02-28") %>% 
   distinct(Email, SFProduct) %>% 
@@ -90,89 +90,66 @@ df_fortable %>%
   count() %>% 
   ungroup() 
 
+
+df_fortable2 <- df_fortable %>% 
+  dplyr::filter(SF_LastLoginDate >= "2022-02-01" & SF_LastLoginDate <="2022-02-28") 
+
+
+# df_fortable %>% 
+#   group_by(Email) %>%
+#   summarise_each(funs(sum), - MCProfile, - SocialProfile, - SFProduct) %>% 
+#   gather(Var, Val, - Date_Range) %>%
+#   group_by(Date_Range) %>% 
+#   mutate(ind = row_number()) %>% 
+#   spread(Date_Range, Val)
+
+# df_fortable %>%
+#   group_by(Email, SFProduct, MCProfile, SocialProfile) %>% 
+#   summarize(Freq = count())
+
 # pivot longer to produce a table
-library(data.table)
-df_fortable %>% 
-  group_by(Email) %>%
-  summarise_each(funs(sum), - MCProfile, - SocialProfile, - SFProduct) %>% 
-  gather(Var, Val, - Date_Range) %>%
-  group_by(Date_Range) %>% 
-  mutate(ind = row_number()) %>% 
-  spread(Date_Range, Val)
-
-df_fortable %>%
-  group_by(Email, SFProduct, MCProfile, SocialProfile) %>% 
-  summarize(Freq = count())
-# ####check df_foruse####
-# names(df_foruse)
-# df_foruse <- df_foruse %>% 
-#   # select(-NetID__c.x, -NetID__c.y, -SFUserId, -Academic_Department__c) %>% 
-#   # select(-SFUserId, -Academic_Department__c) %>% 
-#   #remove redundant columns
-#   distinct() 
-# 
-# 
-# write_named_csv(df_foruse)
-# 
-# ####floor the dates to all Jan 2022####
-# df_month <- df_use %>%
-#   mutate(MCLoginMonth = floor_date(as_date(MC_LastLoginDate), "month")) %>% 
-#   mutate(SFLoginMonth = floor_date(as_date(SF_LastLoginDate), "month")) %>% 
-#   mutate(SocialLoginMonth = floor_date(as_date(Social_LastLoginDate), "month")) %>% 
-#   mutate(LastLoginTime = floor_date(as_date(LoginTime), "month"))
-# 
-# df_month <- df_month %>% 
-#   select(-MC_LastLoginDate, -SF_LastLoginDate, -Social_LastLoginDate, -LoginTime)
-# 
-# df_month2 <- df_month %>%
-#   # filter(FL_DATE >= as.Date("2014-01-05"))
-#   filter(SFLoginMonth >= as.Date("2022-01-01"))
-# 
-# # remove redundant columns 
-# df_month2 <- unique(df_month2)
-# 
-# #### write csv
-# write_named_csv(df_use)
-# write_named_csv(df_month2)
-# 
-# names(df_fortable)
-# df_fortable <- df_foruse %>% select(Email, Primary_Department__r.Name,	MCProfile,
-#                                     SocialProfile,SFProduct,Parent_Organization__c,hed__Account__r.Name)
-# df_fortable<-unique(df_fortable) # 837
-# 
-# #check outcome
-# df_foruse %>% count(df_foruse$MCProfile)
-# length(unique(df_foruse$Email[df_foruse$MCProfile=="MC"]))
-# 
-# ## drop none logins
-# df_foruse_non_na <- df_foruse %>% 
-#   mutate(num_na = is.na(MC_LastLoginDate) + is.na(Social_LastLoginDate) + is.na(SF_LastLoginDate)) %>% 
-#   filter(num_na < 3)
-# 
-# 
-# # remove duplicates 
-# # df_fortable2 <- df_fortable[!duplicated(df_fortable$Last.Login), ]
-# # df_fortable2<-unique(df_fortable2)
-# # df_fortable2 <- df_fortable %>% 
-# #   group_by(SFProduct) %>% 
-# #   dplyr::mutate(count=sum(!(is.na(n))), sum = sum(n, na.rm = T))
-# 
-# # write to csv
-# # write.csv(df_fortable, paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/df_fortable", last_month, this_year, ".csv"), row.names = FALSE)
-
-
 # make one long table with MCProfile, SocialProfile, and SFProduct
 head(df_fortable)
 # pivoting to make a new dataframe
 product_longer <- df_fortable %>% 
   pivot_longer(cols = c(MCProfile, SocialProfile, SFProduct),
                names_to = "col_name", 
-               values_to = "SFProduct/MC/Social") %>% 
-  drop_na("SFProduct/MC/Social") %>% 
+               values_to = "MC-Social-SFProduct") %>% 
+  drop_na("MC-Social-SFProduct") %>% 
   distinct()
 
 write_named_csv(product_longer)
 
+# check tables
+product_longer %>% 
+  # dplyr::filter(SF_LastLoginDate >= "2022-02-01" & SF_LastLoginDate <="2022-02-28") %>% 
+  distinct(Email,`MC-Social-SFProduct`) %>%
+  group_by(`MC-Social-SFProduct`) %>% 
+  count()%>% 
+  ungroup() # n=150 
+
+df_fortable %>% 
+  # dplyr::filter(SF_LastLoginDate >= "2022-02-01" & SF_LastLoginDate <="2022-02-28") %>% 
+  distinct(NetID__c, MC.Social.SFProduct) %>%
+  group_by(MC.Social.SFProduct) %>% 
+  count()%>% 
+  ungroup() # n=150 
+
+### add netid value if name present, add name if netid present
+df_fortable2 <- df_fortable %>%
+  dplyr::mutate(NetID = case_when(!is.na(NetID__c) ~ NetID__c,
+                              TRUE ~ Name))
+
+write_named_csv(df_fortable2)
+
+# count number of distinct NetID from df_fortable2
+library(sqldf)
+sqldf("select count(distinct NetID) from df_fortable2") #1233
+
+
+  # mutate(NetID = ifelse(`Q7.2_1 Have used Release notes` == "I have used/attended.",
+  #                       "I am aware.", 
+  #                       `Q7.1_1 Aware of Release notes`))
 # old way to merge
 SFuserscount_t<- df_fortable %>%
   dplyr::filter(SF_LastLoginDate >= "2022-02-01" & SF_LastLoginDate <="2022-02-28") %>% 
