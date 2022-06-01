@@ -2,6 +2,7 @@
 # Jung Mee Park
 # jmpark@arizona.edu
 # 2022-03-28
+# updated 2022-06-01 for CreatedDate
 
 ####Load Libraries####
 library('tidyverse')
@@ -11,10 +12,12 @@ library('salesforcer')
 library('lubridate')
 library(reshape2)
 library(readxl)
+# library(taskscheduleR)
 
 ####check working directory####
 getwd() #figure out the working directory
 setwd("D:/Users/jmpark/Box/Trellis/Program Team/Trellis Metrics Reports/Trellis KPIs/Raw data")
+# setwd("~/monthly_report_SF_trellis_users")
 
 rm(list=ls(all=TRUE)) 
 options(digits=3)
@@ -29,8 +32,10 @@ this_year <- year(today)
 format(today, format="%B %d %Y")
 #### function to write copy files into csv####
 write_named_csv <- function(x) 
-  write_csv(x, file = paste0("D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/Feb 2022 data files/",
-                             deparse(substitute(x)), last_month, this_year,".csv"))
+  write_csv(x, file = paste0(
+    # "D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/Apr 2022 data files/",
+    "D:/Users/jmpark/Box/My Box Notes/May 2022 data/",
+    deparse(substitute(x)),"_", last_month, "_",this_year,".csv"))
 
 ####Import data from SF####
 sf_auth()
@@ -76,22 +81,29 @@ perms2prods <- read_excel("20220224_Permissionsets_mapped_to_Products.xlsx")
 #### splunk reports ####
 splunk_reports <- list.files("./2022 Splunk Reports")  # Identify file names
 splunk_reports
-
+# 
 Social_Logins <- read_csv(paste0(this_year, " Splunk Reports/", month.name[last_month],
                                  " ",this_year,"/Users,_last_login,_social_studio-",
                                  this_year,"-0",this_month,"-01.csv"))
-# Users,_last_login,_marketing_cloud-2022-03-01
-# MC_Logins <- read_csv(paste0(this_year, " Splunk Reports/", month.name[last_month],
-#                              " ",this_year,"/Users,_last_login,_marketing_cloud-",
-#                              this_year,"-0",this_month,"-01.csv"))
+# Social_Logins <- read_csv("social_studio_logins,_last_12_months-2022-05-01.csv")
 
-MC_Logins <- read.csv("marketing_users_April7_2022.csv")
+# Users,_last_login,_marketing_cloud-2022-03-01
+MC_Logins <- read_csv(paste0(this_year, " Splunk Reports/", month.name[last_month],
+                             " ",this_year,"/Users,_last_login,_marketing_cloud-",
+                             this_year,"-0",this_month,"-01.csv"))
+# MC_Logins <- read.csv("Users,_last_login,_marketing_cloud-2022-05-01.csv")
 
 # # create a netid column
 # library(stringr)
 # library(stringi)
 # 
 # MC_Logins$NetID__c <- stri_match_first_regex(MC_Logins$Email, "(.*?)\\@")[,2]
+
+# SF Query as of June 1
+write_named_csv(affiliations)
+write_named_csv(contact_records)
+write_named_csv(permissionsets)
+write_named_csv(users_SF)
 
 #rename var indicating that login was for a particular tool
 MC_Logins$Profile.Name<-"MC"
@@ -102,12 +114,9 @@ colnames(Social_Logins)[1]<-"NetID__c"
 
 # drop some columns from MC
 names(MC_Logins)
-MC_Logins <- MC_Logins[,-c(1,2, 6,7)]
-colnames(MC_Logins)[1]<-"Email" # change campaign.member.email to email
-colnames(MC_Logins)[2]<-"NetID__c"
-
-
-
+# MC_Logins <- MC_Logins[,-c(1,2, 6,7)]
+# colnames(MC_Logins)[1]<-"Email" # change campaign.member.email to email
+colnames(MC_Logins)[1]<-"NetID__c"
 # users <- read.csv("./2022 Splunk Reports/February 2022/MtD Licensed Users Logged In-2022-02-25-17-00-06.csv")
 
 ####STEP 3: Merge files####
@@ -131,7 +140,7 @@ names(upp_c)
 
 upp_c %>% count(Profile.Name)
 
-upp_c<-distinct(upp_c)
+upp_c <-distinct(upp_c)
 # upp_c<-subset(upp_c, upp_c$PermissionSet.Name!="X00ef4000001uSgMAAU" & upp_c$PermissionSet.Name!="X00e2S000000G6SIQA0")
 
 #### create 'base' product from profile name ####
@@ -155,9 +164,10 @@ MC_contacts <- merge(contact_records, MC_Logins, by.x = "NetID__c",
 
 MC_contacts_social <- merge(MC_contacts, Social_Logins, by.x = c("NetID__c"), 
                             by.y = c("NetID__c"), all = TRUE)
-MC_s_c_u <- merge(MC_contacts_social, upp_c, by.x = c("NetID__c"), 
-                  by.y = c("NetID__c.y"), all=TRUE)
-
+MC_s_c_u <- merge(MC_contacts_social, upp_c, by.x = c("NetID__c"),
+                  by.y = c("NetID__c.x"), all=TRUE)
+# MC_s_c_u <- merge(MC_contacts_social, upp_c, by.x = c("Id"), 
+#                   by.y = c("Id"), all=TRUE)
 names(MC_s_c_u) # marketing social contacts users
 
 # create a single column for Trellis Products
@@ -171,8 +181,8 @@ product_longer <- MC_s_c_u %>%
 names(product_longer)
 
 MC_s_c_u2 <- product_longer %>%
-  select(NetID__c,Name,UserRole.Name, Profile.Name,
-         "MC-Social-SFProduct", MDM_Primary_Type__c.x, PermissionSet.Name, 
+  select(NetID__c,Name,UserRole.Name, Profile.Name, CreatedDate,
+         "MC-Social-SFProduct", PermissionSet.Name, 
          hed__Primary_Organization__c.x, Department,Id.x,  
          Primary_Department__r.Name.y) %>% 
   distinct()
@@ -182,6 +192,7 @@ MC_s_c_u2 %>%
   group_by(`MC-Social-SFProduct`) %>% 
   count()%>% 
   ungroup()
+write_named_csv(MC_s_c_u2)
 #Merge in Affiliations
 names(affiliations)
 affiliation1s <- subset(affiliations, affiliations$hed__Primary__c==TRUE)
@@ -192,31 +203,12 @@ df_foruse <- merge(MC_s_c_u2, affiliation1s, by.x = "Id.x", by.y = "hed__Contact
 
 # distinct tables with select variables after merged into affiliations
 df_foruse2 <- df_foruse %>%
-  select(NetID__c,Name,UserRole.Name, Profile.Name,
-         "MC-Social-SFProduct",  PermissionSet.Name, 
+  select(NetID__c,Name,UserRole.Name, Profile.Name, 
+         "MC-Social-SFProduct",  PermissionSet.Name, CreatedDate, 
          Parent_Organization__c, hed__Account__r.Name) %>% 
   distinct()
 
 write_named_csv(df_foruse2)
-
-#### read csv for March 2022 ####
-getwd()
-setwd("~/Documents/Trellis/CRM-16425/CRM-16425-exploration/Mar 2022 data")
-MC_s_c_u2 <- read.csv("Mar 2022 dataMC_s_c_u232022.csv")
-df_foruse2 <- read.csv("Mar 2022 datadf_foruse232022.csv")
-df_fortable <- read.csv("Mar 2022 datadf_fortable32022.csv")
-
-# drop MC's and add in new ones
-df_foruse3 <-df_foruse2[!(df_foruse2$MC.Social.SFProduct=="MC"),]
-
-# # pivot wider 
-# # create multiple columns for Trellis Products
-# product_wider <- df_foruse3 %>% 
-#   pivot_wider(cols = c(Profile.Name.x, Profile.Name.y, Product),
-#                names_to = "col_name", 
-#                values_to = "MC-Social-SFProduct") %>% 
-#   drop_na("MC-Social-SFProduct") %>% 
-#   distinct()
 
 # count unique
 df_foruse2 %>% 
@@ -245,23 +237,36 @@ df_fortable %>%
 
 write_named_csv(df_fortable)
 
+### add netid value if name present, add name if netid present
+df_fortable2 <- df_fortable %>%
+  dplyr::mutate(NetID = case_when(!is.na(NetID__c) ~ NetID__c,
+                                  TRUE ~ Name))
+
+write_named_csv(df_fortable2)
 # user role name
-df_fortable %>% 
-  distinct(NetID__c, Profile.Name) %>%
+df_fortable2 %>% 
+  distinct(NetID, Profile.Name) %>%
   group_by(Profile.Name) %>% 
   count()%>% 
   ungroup()
 
-df_fortable %>% 
-  distinct(NetID__c, Profile.Name) %>%
-  # group_by(Profile.Name) %>% 
-  count() # 1301
-# ungroup()
-df_fortable %>% 
-  distinct(NetID__c, `MC-Social-SFProduct`) %>%
+df_fortable2 %>% 
+  distinct(NetID, Profile.Name) %>%
+  group_by(Profile.Name) %>% 
+  count()  %>% 
+  ungroup()
+
+df_fortable2 %>% 
+  distinct(NetID, `MC-Social-SFProduct`) %>%
   group_by(`MC-Social-SFProduct`) %>% 
   count()%>% 
   ungroup()
+
+# df_fortable2 %>% 
+#   distinct(NetID, Profile.Name) %>% 
+#   group_by(NetID) %>%
+#   count() 
+
 
 # target2 <- c("Advising Base", "Salesforce Base", "Service Desk Base")
 # NA_fortable <- filter(df_fortable, !Profile.Name %in% target2)  # equivalently, dat %>% filter(name %in% target)
