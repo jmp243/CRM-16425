@@ -2,7 +2,7 @@
 # attempt to reproduce Francis's tables
 # 2022-02-02
 # for local use
-# last updated 2022-03-02
+# last updated 2022-06-01
 
 #### SET UP Environment ####
 library('tidyverse')
@@ -145,7 +145,6 @@ write_named_csv(df_fortable2)
 # count number of distinct NetID from df_fortable2
 library(sqldf)
 sqldf("select count(distinct NetID) from df_fortable2") #1233
-
 
   # mutate(NetID = ifelse(`Q7.2_1 Have used Release notes` == "I have used/attended.",
   #                       "I am aware.", 

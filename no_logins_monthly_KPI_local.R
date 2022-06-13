@@ -12,8 +12,10 @@ library('salesforcer')
 library('lubridate')
 library(reshape2)
 library(readxl)
-# library(taskscheduleR)
+library(Rserve)
 
+# library(taskscheduleR)
+Rserve(args=" --no-save --RS-conf ~/Documents/Rserv.cfg")
 ####check working directory####
 getwd() #figure out the working directory
 setwd("D:/Users/jmpark/Box/Trellis/Program Team/Trellis Metrics Reports/Trellis KPIs/Raw data")
