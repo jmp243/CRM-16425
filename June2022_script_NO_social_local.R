@@ -2,7 +2,7 @@
 # Jung Mee Park
 # jmpark@arizona.edu
 # 2022-03-28
-# updated 2022-06-17 for CreatedDate and removing Social
+# updated 2022-06-30 for all_marketing_cloud
 
 ####Load Libraries####
 library('tidyverse')
@@ -35,7 +35,7 @@ format(today, format="%B %d %Y")
 write_named_csv <- function(x) 
   write_csv(x, file = paste0(
     # "D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/Apr 2022 data files/",
-    "D:/Users/jmpark/Box/My Box Notes/May 2022 data/",
+    "D:/Users/jmpark/Box/My Box Notes/June 2022 data/",
     deparse(substitute(x)),"_", last_month, "_",this_year,".csv"))
 
 ####Import data from SF####
@@ -127,14 +127,14 @@ MC_Logins <- MC_Logins %>%
 names(MC_Logins)
 # MC_Logins <- MC_Logins[,-c(1,2, 6,7)]
 # colnames(MC_Logins)[1]<-"Email" # change campaign.member.email to email
-colnames(MC_Logins)[1]<-"NetID__c"
+# colnames(MC_Logins)[1]<-"NetID__c"
 # users <- read.csv("./2022 Splunk Reports/February 2022/MtD Licensed Users Logged In-2022-02-25-17-00-06.csv")
 
 ####STEP 3: Merge files####
 # from Frances
 names(users_SF)
 
-users<-users_SF[,-c(5,8:12)] # remove email,"ProfileId", "Title", "Username","UserRoleId","UserType" 
+users<-users_SF[,-c(5,8:12)] # remove Email,"ProfileId", "Title", "Username","UserRoleId","UserType" 
 users<-unique(users)
 
 names(users)
@@ -197,8 +197,9 @@ product_longer <- MC_s_c_u %>%
   distinct()
 names(product_longer)
 
+# select key variables
 MC_s_c_u2 <- product_longer %>%
-  select(NetID__c,Name.x,UserRole.Name,  CreatedDate.y,
+  select(NetID__c,Name.x,UserRole.Name,  CreatedDate.y, Name.y, Id.y, 
          "MC-SFProduct", PermissionSet.Name, Profile.Name.y,
          hed__Primary_Organization__c.x, Id.x,  
          Primary_Department__r.Name.y) %>% 
@@ -224,7 +225,7 @@ write_named_csv(df_foruse)
 # distinct tables with select variables after merged into affiliations
 names(df_foruse)
 df_foruse2 <- df_foruse %>%
-  select(NetID__c,Name.x,UserRole.Name, Profile.Name.y, 
+  select(NetID__c,Name.x,Id.x, UserRole.Name, Profile.Name.y, Id.y, Name.y, 
          "MC-SFProduct",  PermissionSet.Name, CreatedDate.y, 
          Parent_Organization__c, hed__Account__r.Name) %>% 
   distinct()
@@ -241,8 +242,8 @@ df_foruse2 %>%
 # figure out how many profile names there are
 # count unique
 df_foruse2 %>% 
-  distinct(NetID__c, Profile.Name.y) %>%
-  group_by(Profile.Name.y) %>% 
+  distinct(NetID__c, Profile.Name.y, Parent_Organization__c) %>%
+  group_by(Parent_Organization__c) %>% 
   count()%>% 
   ungroup()
 
@@ -261,7 +262,7 @@ write_named_csv(df_fortable)
 ### add netid value if name present, add name if netid present
 df_fortable2 <- df_fortable %>%
   dplyr::mutate(NetID = case_when(!is.na(NetID__c) ~ NetID__c,
-                                  TRUE ~ Name))
+                                  TRUE ~ Id.y))
 
 write_named_csv(df_fortable2)
 # user role name
@@ -271,17 +272,58 @@ df_fortable2 %>%
   count()%>% 
   ungroup()
 
-df_fortable2 %>% 
-  distinct(NetID, Profile.Name) %>%
-  group_by(Profile.Name) %>% 
-  count()  %>% 
-  ungroup()
+# df_fortable2 %>% 
+#   distinct(NetID, Profile.Name.y) %>%
+#   group_by(Profile.Name.y) %>% 
+#   count()  %>% 
+#   ungroup()
 
 df_fortable2 %>% 
-  distinct(NetID, `MC-Social-SFProduct`) %>%
-  group_by(`MC-Social-SFProduct`) %>% 
+  distinct(NetID, `MC-SFProduct`) %>%
+  group_by(`MC-SFProduct`) %>% 
   count()%>% 
   ungroup()
+# 
+# # group by percentages
+# 
+# df_fortable2_perc <- df_fortable2 %>% 
+#   distinct(NetID, Parent_Organization__c, `MC-SFProduct`) %>% 
+#   group_by(Parent_Organization__c)
 
-#### Connect to Rserve ####
-Rserve(args=" --no-save --RS-conf ~/Documents/Rserv.cfg")
+
+# df_fortable2_perc <- df_fortable2 %>%                                    # Calculate percentage by group
+#   group_by(Parent_Organization__c) %>%
+#   mutate(perc = MC-SFProduct / sum(MC-SFProduct)) %>%
+#   as.data.frame()
+# df_fortable2_perc
+
+
+# select key variables
+df_fortable3 <- df_fortable2 %>%
+  select(NetID, CreatedDate.y,UserRole.Name,
+         `MC-SFProduct`,  Profile.Name.y,
+         Parent_Organization__c, hed__Account__r.Name) %>% 
+  distinct()
+
+df_fortable3 %>% 
+  distinct(NetID) %>%
+  count()
+
+write_named_csv(df_fortable3)
+
+##reshape for one line per user
+names(df_fortable3)
+for_reshape<-df_fortable3
+for_reshape$counter<-1
+for_reshape<-unique(for_reshape)
+for_reshape %>% group_by(Profile.Name.y) %>% tally 
+
+#test<-merge(for_reshape, users_stripped, by.x = "NetID__c.x", by.y = "NetID__c", all = TRUE)
+
+for_use<-reshape(for_reshape, v.names="counter", timevar="MC-SFProduct",
+                 idvar=c("CreatedDate.y", "NetID", "Parent_Organization__c", "Profile.Name.y", "UserRole.Name"),
+                 direction="wide")
+
+
+# #### Connect to Rserve ####
+# Rserve(args=" --no-save --RS-conf ~/Documents/Rserv.cfg")
