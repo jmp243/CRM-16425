@@ -35,7 +35,7 @@ format(today, format="%B %d %Y")
 write_named_csv <- function(x) 
   write_csv(x, file = paste0(
     # "D:/Users/jmpark/WorkSpaces/jmpark_data/Program Team KPIs/Apr 2022 data files/",
-    "D:/Users/jmpark/Box/My Box Notes/June 2022 data/",
+    # "D:/Users/jmpark/Box/My Box Notes/June 2022 data/",
     deparse(substitute(x)),"_", last_month, "_",this_year,".csv"))
 
 ####Import data from SF####
@@ -264,6 +264,9 @@ df_fortable2 <- df_fortable %>%
   dplyr::mutate(NetID = case_when(!is.na(NetID__c) ~ NetID__c,
                                   TRUE ~ Id.y))
 
+### drop someone with netid crm-tech
+df_fortable2 <- df_fortable2[!(df_fortable2$NetID=="crm-tech"),]
+
 write_named_csv(df_fortable2)
 # user role name
 df_fortable2 %>% 
@@ -279,10 +282,12 @@ df_fortable2 %>%
 #   ungroup()
 
 df_fortable2 %>% 
-  distinct(NetID, `MC-SFProduct`) %>%
-  group_by(`MC-SFProduct`) %>% 
+  distinct(NetID, `MC.SFProduct`) %>%
+  group_by(`MC.SFProduct`) %>% 
   count()%>% 
   ungroup()
+
+
 # 
 # # group by percentages
 # 
@@ -301,7 +306,7 @@ df_fortable2 %>%
 # select key variables
 df_fortable3 <- df_fortable2 %>%
   select(NetID, CreatedDate.y,UserRole.Name,
-         `MC-SFProduct`,  Profile.Name.y,
+         `MC.SFProduct`,  Profile.Name.y,
          Parent_Organization__c, hed__Account__r.Name) %>% 
   distinct()
 
@@ -311,19 +316,71 @@ df_fortable3 %>%
 
 write_named_csv(df_fortable3)
 
-##reshape for one line per user
-names(df_fortable3)
-for_reshape<-df_fortable3
-for_reshape$counter<-1
-for_reshape<-unique(for_reshape)
-for_reshape %>% group_by(Profile.Name.y) %>% tally 
+# ##reshape for one line per user
+# names(df_fortable3)
+# for_reshape<-df_fortable3
+# for_reshape$counter<-1
+# for_reshape<-unique(for_reshape)
+# for_reshape %>% group_by(Profile.Name.y) %>% tally 
 
 #test<-merge(for_reshape, users_stripped, by.x = "NetID__c.x", by.y = "NetID__c", all = TRUE)
 
-for_use<-reshape(for_reshape, v.names="counter", timevar="MC-SFProduct",
-                 idvar=c("CreatedDate.y", "NetID", "Parent_Organization__c", "Profile.Name.y", "UserRole.Name"),
-                 direction="wide")
-
+# for_use<-reshape(for_reshape, v.names="counter", timevar="MC-SFProduct",
+#                  idvar=c("CreatedDate.y", "NetID", "Parent_Organization__c", "Profile.Name.y", "UserRole.Name"),
+#                  direction="wide")
+# 
 
 # #### Connect to Rserve ####
 # Rserve(args=" --no-save --RS-conf ~/Documents/Rserv.cfg")
+
+#### local login ####
+setwd("~/Documents/Trellis/CRM-16425/CRM-16425-exploration/Jun2022 data")
+df_fortable2 <- read.csv("df_fortable2_5_2022.csv")
+
+# write named csv locally 
+write_named_csv <- function(x) 
+  write_csv(x, file = paste0(
+    deparse(substitute(x)),"_", last_month, "_",this_year,".csv"))
+
+
+#### flip data wider ####
+wide_df_fortable2 <- df_fortable2 %>%
+  select(NetID, Name.x, Name.y,CreatedDate.y, 
+         Profile.Name.y,
+         Parent_Organization__c, MC.SFProduct) %>% 
+  distinct()
+
+wide_df_fortable2 <- wide_df_fortable2 %>%
+  pivot_wider(names_from = MC.SFProduct, values_from = MC.SFProduct) %>% 
+  distinct()
+# 
+# # select key variables
+# wide_df_fortable3 <- wide_df_fortable2 %>%
+#   select(NetID, Name.x, Name.y,CreatedDate.y, 
+#          Profile.Name.y,
+#          Parent_Organization__c,   
+#          `Service Desk`, `Scheduling/Notes`, Events, MC, `Marketing - SF`, 
+#          `External Partners`, Reports, SAFER) %>% 
+#   distinct()
+# 
+
+#### clean up name column ####
+wide_df_fortable3 <- wide_df_fortable2  %>%
+  dplyr::mutate(Name = case_when(!is.na(Name.y) ~ Name.y,
+                                  TRUE ~ Name.x))
+
+
+# Select columns except name.x and name.y
+wide_df_fortable3 <-wide_df_fortable3 %>% select(-c(Name.x, Name.y)) 
+
+# move name next to NetID
+wide_df_fortable3 <- wide_df_fortable3 %>% relocate(Name)
+
+write.csv(wide_df_fortable3, "product_users_June2022_ParentOrg.csv")
+
+# remove the parent org
+wide_df_fortable4 <-wide_df_fortable3 %>% 
+  select(-c(Parent_Organization__c)) %>% 
+  distinct()
+
+write.csv(wide_df_fortable4, "product_users_June2022_single_line.csv")
