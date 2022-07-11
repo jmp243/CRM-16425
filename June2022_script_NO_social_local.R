@@ -376,11 +376,56 @@ wide_df_fortable3 <-wide_df_fortable3 %>% select(-c(Name.x, Name.y))
 # move name next to NetID
 wide_df_fortable3 <- wide_df_fortable3 %>% relocate(Name)
 
+# wide_df_fortable3 <- wide_df_fortable3 %>%
+#   pivot_wider(names_from = Parent_Organization__c, values_from = Parent_Organization__c) %>% 
+#   distinct()
+# 
 write.csv(wide_df_fortable3, "product_users_June2022_ParentOrg.csv")
+
+# find duplicated netid rows
+dup_fortable3 <- duplicated(wide_df_fortable3[,1:2])
+duplicated <- wide_df_fortable3[dup_fortable3,]
+
+
+fortable3_PO2 <- wide_df_fortable3 %>% 
+  group_by(NetID) %>% 
+  mutate(group = row_number()) %>% 
+  pivot_wider(
+    id_cols = NetID, 
+    names_from = group,
+    values_from = Parent_Organization__c,
+    names_sort = TRUE
+  ) %>% 
+  ungroup() %>% 
+  arrange(NetID)
+
+# my_data %>%
+#   group_by(id) %>%
+#   mutate(
+#     group = row_number()
+#   ) %>%
+#   pivot_wider(
+#     id_cols = id, 
+#     names_from = group,
+#     values_from = org,
+#     names_sort = TRUE
+#   ) %>%
+#   ungroup() %>%
+#   arrange(id)
+
+# merge this to the existing dataframce
+# users_perms_prods<-merge(users_perms, perms2prods, by.x = "PermissionSet.Name", by.y = "PermissionSet.Name", all.x = TRUE)
 
 # remove the parent org
 wide_df_fortable4 <-wide_df_fortable3 %>% 
   select(-c(Parent_Organization__c)) %>% 
   distinct()
 
-write.csv(wide_df_fortable4, "product_users_June2022_single_line.csv")
+fortable4 <- merge(wide_df_fortable4, fortable3_PO2, by.x = "NetID", by.y = "NetID", all = TRUE)
+
+# rename columns
+colnames(fortable4)[13] = "Parent_Org_1"
+colnames(fortable4)[14] = "Parent_Org_2"
+colnames(fortable4)[15] = "Parent_Org_3"
+
+write_named_csv(fortable4)
